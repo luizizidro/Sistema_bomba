@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Seleção de Bombas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Seleção de Bombas</h1>
+        
+        <div class="main-content">
+            <div class="chart-container">
+                <canvas id="pumpChart"></canvas>
+            </div>
+            
+            <div class="control-panel">
+                <div class="section">
+                    <h3>Dados da Bomba</h3>
+                    <div class="form-group">
+                        <label for="pumpSelect">Modelo:</label>
+                        <select id="pumpSelect">
+                            <option value="BC-21 R 1/2 (3 CV)">BC-21 R 1/2 (3 CV)</option>
+                            <option value="BC-21 R 1/2 (4 CV)">BC-21 R 1/2 (4 CV)</option>
+                            <option value="Bomba Trabalho">Bomba Trabalho</option>
+                        </select>
+                    </div>
+                    
+                    <div class="info-display">
+                        <div class="info-item">
+                            <span class="label">Potência (CV):</span>
+                            <span id="powerInfo">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Rotação (rpm):</span>
+                            <span id="rotationInfo">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">NPSHr (mca):</span>
+                            <span id="npshInfo">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Rendimento (%):</span>
+                            <span id="efficiencyInfo">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>Calcular Ponto de Operação</h3>
+                    <div class="form-group">
+                        <label for="flowInput">Vazão (m³/h):</label>
+                        <input type="number" id="flowInput" step="0.01">
+                        <button onclick="updateFromFlow()">OK</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="headInput">Altura (m):</label>
+                        <input type="number" id="headInput" step="0.01">
+                        <button onclick="updateFromHead()">OK</button>
+                    </div>
+                    <p class="note">Nota: Vazão e Altura são interligadas. Ao calcular um valor, o outro é preenchido automaticamente.</p>
+                </div>
+                
+                <div class="section">
+                    <h3>Resultados do Ponto de Operação</h3>
+                    <div class="results">
+                        <div id="flowResult">Vazão (m³/h): -</div>
+                        <div id="headResult">Altura (m): -</div>
+                        <div id="powerResult">Potência Resultante (CV): -</div>
+                        <div id="efficiencyResult">Rendimento no Ponto (%): -</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
