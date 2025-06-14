@@ -159,8 +159,8 @@ O sistema fornece feedback inteligente:
 - **Rotação**: 1.700 rpm
 - **NPSHr**: 25 mca
 - **Rendimento Máximo**: 75%
-- **Faixa de Vazão**: 0 - 120 m³/h
-- **Altura Máxima**: ~65 m
+- **Faixa de Vazão**: 0 - 500 m³/h
+- **Altura Máxima**: ~200 m
 
 ## 📊 Interpretação dos Gráficos
 

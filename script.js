@@ -76,25 +76,25 @@ const pumpData = {
         rotacao_rpm: 1700,
         npsh_mca: 25,
         rendimento_percent: 75,
-        vazao_data: linspace(0, 120, 100),
+        vazao_data: linspace(0, 500, 100), // Atualizado para 500 m³/h
         get altura_data() {
             return this.vazao_data.map(q => {
-                const h0 = 65; // Altura de shutoff
-                const qMax = 130; // Vazão máxima teórica
+                const h0 = 200; // Altura de shutoff atualizada para 200m
+                const qMax = 520; // Vazão máxima teórica
                 return h0 * (1 - Math.pow(q / qMax, 1.6));
             });
         },
         get potencia_data() {
             return this.vazao_data.map(q => {
                 const p0 = 12;
-                return p0 + (q / 120) * 34.5 + 0.002 * q * q;
+                return p0 + (q / 500) * 34.5 + 0.00015 * q * q; // Ajustado para nova faixa
             });
         },
         get npsh_curva() {
-            return this.vazao_data.map(q => 15 + (q / 120) * 20 + 0.001 * q * q);
+            return this.vazao_data.map(q => 15 + (q / 500) * 20 + 0.0002 * q * q); // Ajustado para nova faixa
         },
         get rendimento_curva() {
-            return generateEfficiencyCurve(this.vazao_data, 75, 75);
+            return generateEfficiencyCurve(this.vazao_data, 300, 75); // BEP ajustado para 300 m³/h
         }
     }
 };
