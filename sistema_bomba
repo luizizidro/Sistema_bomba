@@ -1,0 +1,263 @@
+import tkinter as tk
+from tkinter import ttk
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+from matplotlib import ticker
+
+# --- Dados das Bombas (com Fórmulas Corrigidas) ---
+
+def generate_efficiency_curve(flow_data, bep_flow, max_efficiency):
+    """Gera uma curva de rendimento que não fica negativa."""
+    efficiency = max_efficiency - ((flow_data - bep_flow) / bep_flow)**2 * max_efficiency * 1.2
+    return np.maximum(0, efficiency) # Garante que o rendimento nunca seja < 0
+
+pump_data = {
+    "BC-21 R 1/2 (3 CV)": {
+        "potencia_cv": 3, "rotacao_rpm": 3500, "npsh_mca": 2.87, "rendimento_percent": 57.05,
+        "vazao_data": np.linspace(0, 42, 100),
+        "altura_data": -0.016 * np.linspace(0, 42, 100)**2 + 0.25 * np.linspace(0, 42, 100) + 30,
+        "potencia_data": -0.0025 * np.linspace(0, 42, 100)**2 + 0.18 * np.linspace(0, 42, 100) + 0.8,
+        "npsh_curva": np.linspace(1.5, 3.5, 100),
+        "rendimento_curva": generate_efficiency_curve(np.linspace(0, 42, 100), bep_flow=25, max_efficiency=57.05)
+    },
+    "BC-21 R 1/2 (4 CV)": {
+        "potencia_cv": 4, "rotacao_rpm": 3500, "npsh_mca": 2.87, "rendimento_percent": 54.68,
+        "vazao_data": np.linspace(0, 50, 100),
+        "altura_data": -0.014 * np.linspace(0, 50, 100)**2 + 0.1 * np.linspace(0, 50, 100) + 41,
+        "potencia_data": -0.001 * np.linspace(0, 50, 100)**2 + 0.1 * np.linspace(0, 50, 100) + 1.5,
+        "npsh_curva": np.linspace(1.8, 3.0, 100),
+        "rendimento_curva": generate_efficiency_curve(np.linspace(0, 50, 100), bep_flow=30, max_efficiency=54.68)
+    },
+    # --- NOVA BOMBA ADICIONADA ---
+    "Bomba Trabalho": {
+        "potencia_cv": 46.5,
+        "rotacao_rpm": 1700,
+        "npsh_mca": 25,
+        "rendimento_percent": 75,
+        "vazao_data": np.linspace(0, 100, 100),
+        "altura_data": -0.005 * np.linspace(0, 100, 100)**2 - 0.1 * np.linspace(0, 100, 100) + 60,
+        "potencia_data": -0.002 * np.linspace(0, 100, 100)**2 + 0.5 * np.linspace(0, 100, 100) + 15,
+        "npsh_curva": np.linspace(15, 30, 100),
+        "rendimento_curva": generate_efficiency_curve(np.linspace(0, 100, 100), bep_flow=65, max_efficiency=75)
+    }
+}
+
+class PumpSelectorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Sistema de Seleção de Bombas")
+        self.root.geometry("1250x700")
+
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        plot_frame = ttk.Frame(main_frame)
+        plot_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+        control_frame = ttk.Frame(main_frame, width=320)
+        control_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        control_frame.pack_propagate(False)
+
+        # --- Painel de Controle ---
+        pump_info_frame = ttk.LabelFrame(control_frame, text="Dados da Bomba", padding="10")
+        pump_info_frame.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(pump_info_frame, text="Modelo:").grid(row=0, column=0, sticky="w", pady=3)
+        self.pump_var = tk.StringVar()
+        pump_options = list(pump_data.keys())
+        self.pump_menu = ttk.OptionMenu(pump_info_frame, self.pump_var, pump_options[0], *pump_options, command=self.on_pump_select)
+        self.pump_menu.grid(row=0, column=1, sticky="ew", pady=3)
+
+        self.info_labels = {}
+        info_fields = ["Potência (CV):", "Rotação (rpm):", "NPSHr (mca):", "Rendimento (%):"]
+        for i, field in enumerate(info_fields, 1):
+            ttk.Label(pump_info_frame, text=field).grid(row=i, column=0, sticky="w", pady=3)
+            self.info_labels[field] = ttk.Label(pump_info_frame, text="")
+            self.info_labels[field].grid(row=i, column=1, sticky="w", pady=3)
+
+        op_point_frame = ttk.LabelFrame(control_frame, text="Calcular Ponto de Operação", padding="10")
+        op_point_frame.pack(fill=tk.X)
+
+        ttk.Label(op_point_frame, text="Vazão (m³/h):").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.flow_entry = ttk.Entry(op_point_frame, width=10)
+        self.flow_entry.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(op_point_frame, text="OK", command=self.update_from_flow, width=5).grid(row=0, column=2, padx=5, pady=5)
+
+        ttk.Label(op_point_frame, text="Altura (m):").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.head_entry = ttk.Entry(op_point_frame, width=10)
+        self.head_entry.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(op_point_frame, text="OK", command=self.update_from_head, width=5).grid(row=1, column=2, padx=5, pady=5)
+
+        info_text = "Nota: Vazão e Altura são interligadas. Ao calcular um valor, o outro é preenchido automaticamente."
+        info_label = ttk.Label(op_point_frame, text=info_text, wraplength=280, justify="left", font=("Arial", 8, "italic"))
+        info_label.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky="w")
+
+
+        result_frame = ttk.LabelFrame(control_frame, text="Resultados do Ponto de Operação", padding="10")
+        result_frame.pack(fill=tk.X, pady=10)
+
+        self.result_labels = {}
+        result_fields = ["Vazão (m³/h):", "Altura (m):", "Potência Resultante (CV):", "Rendimento no Ponto (%):"]
+        for field in result_fields:
+            self.result_labels[field] = ttk.Label(result_frame, text=f"{field} -")
+            self.result_labels[field].pack(anchor="w")
+
+        # --- Gráfico ---
+        self.fig, self.ax1 = plt.subplots()
+        self.fig.subplots_adjust(left=0.1, right=0.72) # Ajusta espaço à direita
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        self.ax2 = self.ax1.twinx()
+        self.ax3 = self.ax1.twinx()
+        self.ax4 = self.ax1.twinx()
+
+        self.ax3.spines['right'].set_position(('outward', 70))  # Aumenta espaçamento
+        self.ax4.spines['right'].set_position(('outward', 130)) # Aumenta espaçamento
+
+        self.operating_point_plot = None
+        self.on_pump_select(self.pump_var.get())
+
+    def on_pump_select(self, selected_pump_name):
+        self.clear_results()
+        data = pump_data[selected_pump_name]
+        self.info_labels["Potência (CV):"].config(text=f"{data['potencia_cv']} CV")
+        self.info_labels["Rotação (rpm):"].config(text=f"{data['rotacao_rpm']} rpm")
+        self.info_labels["NPSHr (mca):"].config(text=f"{data['npsh_mca']} mca")
+        self.info_labels["Rendimento (%):"].config(text=f"{data['rendimento_percent']}%")
+        self.plot_curves()
+
+    def plot_curves(self):
+        selected_pump_name = self.pump_var.get()
+        data = pump_data[selected_pump_name]
+
+        for ax in [self.ax1, self.ax2, self.ax3, self.ax4]:
+            ax.clear()
+
+        p1, = self.ax1.plot(data['vazao_data'], data['altura_data'], "r-", label="Altura (H)")
+        p2, = self.ax2.plot(data['vazao_data'], data['potencia_data'], "b-", label="Potência (CV)")
+        p3, = self.ax3.plot(data['vazao_data'], data['npsh_curva'], "g-", label="NPSH (mca)")
+        p4, = self.ax4.plot(data['vazao_data'], data['rendimento_curva'], "m-", label="Rendimento (%)")
+
+        self.ax1.set_xlabel("Vazão - Q (m³/h)")
+
+        # Limpa rótulos dos eixos Y
+        for ax in [self.ax1, self.ax2, self.ax3, self.ax4]:
+            ax.set_ylabel("")
+
+        # Ajusta as cores dos números dos eixos
+        for ax, p in zip([self.ax1, self.ax2, self.ax3, self.ax4], [p1, p2, p3, p4]):
+            ax.tick_params(axis='y', colors=p.get_color())
+        
+        # --- AJUSTE PARA EVITAR SOBREPOSIÇÃO ---
+        # Limita o número de marcações nos eixos da direita para evitar poluição visual
+        for ax in [self.ax2, self.ax3, self.ax4]:
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=6, prune='upper'))
+
+
+        self.ax1.grid(True)
+        self.ax1.set_title("Curvas Características da Bomba", pad=20)
+
+        handles = [p1, p2, p3, p4]
+        self.fig.legend(handles=handles, loc='center left', bbox_to_anchor=(0.77, 0.5))
+
+        self.canvas.draw()
+
+    def update_from_flow(self):
+        self.clear_operating_point()
+        try:
+            flow_val = float(self.flow_entry.get())
+            data = pump_data[self.pump_var.get()]
+
+            if not (data['vazao_data'].min() <= flow_val <= data['vazao_data'].max()):
+                self.clear_results(error="Erro: Vazão fora da faixa da curva.")
+                return
+
+            head_val = np.interp(flow_val, data['vazao_data'], data['altura_data'])
+            power_val = np.interp(flow_val, data['vazao_data'], data['potencia_data'])
+            eff_val = np.interp(flow_val, data['vazao_data'], data['rendimento_curva'])
+
+            self.head_entry.delete(0, tk.END)
+            self.head_entry.insert(0, f"{head_val:.2f}")
+
+            self.update_operating_point_display(flow_val, head_val, power_val, eff_val)
+
+        except (ValueError, TypeError):
+            self.clear_results(error="Erro: Entrada de vazão inválida.")
+
+    def update_from_head(self):
+        self.clear_operating_point()
+        try:
+            head_val = float(self.head_entry.get())
+            data = pump_data[self.pump_var.get()]
+
+            head_curve = data['altura_data']
+            flow_curve = data['vazao_data']
+            idx_max_head = np.argmax(head_curve)
+
+            stable_head_curve = head_curve[idx_max_head:]
+            stable_flow_curve = flow_curve[idx_max_head:]
+
+            min_h, max_h = stable_head_curve.min(), stable_head_curve.max()
+
+            if not (min_h - 1e-6 <= head_val <= max_h + 1e-6):
+                self.clear_results(error="Erro: Altura fora da faixa operacional da curva.")
+                return
+
+            flow_val = np.interp(head_val, stable_head_curve[::-1], stable_flow_curve[::-1])
+            power_val = np.interp(flow_val, flow_curve, data['potencia_data'])
+            eff_val = np.interp(flow_val, flow_curve, data['rendimento_curva'])
+
+            self.flow_entry.delete(0, tk.END)
+            self.flow_entry.insert(0, f"{flow_val:.2f}")
+
+            self.update_operating_point_display(flow_val, head_val, power_val, eff_val)
+
+        except (ValueError, TypeError):
+            self.clear_results(error="Erro: Entrada de altura inválida.")
+
+    def update_operating_point_display(self, flow, head, power, efficiency):
+        self.clear_operating_point()
+
+        self.operating_point_plot = []
+        self.operating_point_plot.extend(self.ax1.plot(flow, head, 'ko', markersize=8))
+        self.operating_point_plot.extend(self.ax2.plot(flow, power, 'ko', markersize=8))
+        self.operating_point_plot.extend(self.ax4.plot(flow, efficiency, 'ko', markersize=8))
+
+        self.result_labels["Vazão (m³/h):"].config(text=f"Vazão (m³/h): {flow:.2f}")
+        self.result_labels["Altura (m):"].config(text=f"Altura (m): {head:.2f}")
+        self.result_labels["Potência Resultante (CV):"].config(text=f"Potência Resultante (CV): {power:.3f}")
+        self.result_labels["Rendimento no Ponto (%):"].config(text=f"Rendimento no Ponto (%): {efficiency:.2f}")
+
+        self.canvas.draw()
+    
+    def clear_operating_point(self):
+        """Função dedicada a limpar apenas os pontos pretos do gráfico."""
+        if self.operating_point_plot:
+            for p in self.operating_point_plot:
+                p.remove()
+            self.operating_point_plot = None
+            self.canvas.draw()
+
+    def clear_results(self, error=None):
+        """Limpa os resultados, os campos de entrada e o ponto de operação do gráfico."""
+        self.flow_entry.delete(0, tk.END)
+        self.head_entry.delete(0, tk.END)
+        
+        self.clear_operating_point()
+
+        if error:
+            self.result_labels["Vazão (m³/h):"].config(text=error)
+            self.result_labels["Altura (m):"].config(text="")
+            self.result_labels["Potência Resultante (CV):"].config(text="")
+            self.result_labels["Rendimento no Ponto (%):"].config(text="")
+        else:
+            for field, label in self.result_labels.items():
+                label.config(text=f"{field} -")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = PumpSelectorApp(root)
+    root.mainloop()
