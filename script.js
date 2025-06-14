@@ -162,7 +162,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     grid: {
                         display: true
-                    }
+                    },
+                    min: 0
                 },
                 y: {
                     type: 'linear',
@@ -174,7 +175,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     ticks: {
                         color: 'red'
-                    }
+                    },
+                    min: 0
                 },
                 y1: {
                     type: 'linear',
@@ -189,7 +191,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     grid: {
                         drawOnChartArea: false,
-                    }
+                    },
+                    min: 0
                 },
                 y2: {
                     type: 'linear',
@@ -205,7 +208,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     grid: {
                         drawOnChartArea: false,
                     },
-                    offset: true
+                    offset: true,
+                    min: 0
                 },
                 y3: {
                     type: 'linear',
@@ -221,7 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     grid: {
                         drawOnChartArea: false,
                     },
-                    offset: true
+                    offset: true,
+                    min: 0
                 }
             }
         }
@@ -309,7 +314,7 @@ function calculateOperatingPoint() {
     const flowInput = document.getElementById('flowInput').value;
     const headInput = document.getElementById('headInput').value;
     
-    if (!flowInput || !headInput) {
+    if (flowInput === '' || headInput === '') {
         showStatus("Erro: Insira valores para vazão e altura.", "error");
         return;
     }
@@ -325,42 +330,75 @@ function calculateOperatingPoint() {
             return;
         }
         
-        if (flowVal <= 0 || headVal <= 0) {
-            showStatus("Erro: Valores devem ser positivos.", "error");
+        // Permitir valores baixos e zero
+        if (flowVal < 0 || headVal < 0) {
+            showStatus("Erro: Valores não podem ser negativos.", "error");
             return;
         }
         
-        // Verificar se os valores estão dentro da faixa da bomba
-        const minFlow = Math.min(...data.vazao_data);
+        // Verificar se os valores estão dentro da faixa da bomba (com tolerância para valores baixos)
+        const minFlow = 0; // Permitir vazão zero
         const maxFlow = Math.max(...data.vazao_data);
-        const minHead = Math.min(...data.altura_data);
+        const minHead = 0; // Permitir altura zero
         const maxHead = Math.max(...data.altura_data);
         
         let warningMessage = "";
         
-        if (flowVal < minFlow || flowVal > maxFlow) {
-            warningMessage += "Vazão fora da faixa recomendada. ";
+        // Avisos mais flexíveis para valores baixos
+        if (flowVal > maxFlow * 1.2) {
+            warningMessage += "Vazão muito alta para esta bomba. ";
+        } else if (flowVal > maxFlow) {
+            warningMessage += "Vazão acima da faixa recomendada. ";
         }
         
-        if (headVal < minHead || headVal > maxHead) {
-            warningMessage += "Altura fora da faixa recomendada. ";
+        if (headVal > maxHead * 1.2) {
+            warningMessage += "Altura muito alta para esta bomba. ";
+        } else if (headVal > maxHead) {
+            warningMessage += "Altura acima da faixa recomendada. ";
+        }
+        
+        // Avisos específicos para valores muito baixos
+        if (flowVal > 0 && flowVal < maxFlow * 0.05) {
+            warningMessage += "Vazão muito baixa - verifique se é adequada para a aplicação. ";
+        }
+        
+        if (headVal > 0 && headVal < maxHead * 0.05) {
+            warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
         }
         
         // Calcular potência e rendimento no ponto especificado
-        const powerVal = interp(flowVal, data.vazao_data, data.potencia_data);
-        const effVal = interp(flowVal, data.vazao_data, data.rendimento_curva);
+        let powerVal, effVal, npshRequired;
         
-        // Verificar se o ponto está próximo da curva característica
-        const expectedHead = interp(flowVal, data.vazao_data, data.altura_data);
-        const headDifference = Math.abs(headVal - expectedHead);
-        const headTolerance = Math.max(expectedHead * 0.15, 2); // 15% de tolerância ou mínimo 2m
-        
-        if (headDifference > headTolerance) {
-            warningMessage += "Ponto distante da curva característica da bomba. ";
+        if (flowVal === 0) {
+            // Condições especiais para vazão zero (shutoff)
+            powerVal = data.potencia_data[0]; // Potência no shutoff
+            effVal = 0; // Rendimento zero em shutoff
+            npshRequired = data.npsh_curva[0]; // NPSH mínimo
+        } else {
+            powerVal = interp(flowVal, data.vazao_data, data.potencia_data);
+            effVal = interp(flowVal, data.vazao_data, data.rendimento_curva);
+            npshRequired = interp(flowVal, data.vazao_data, data.npsh_curva);
         }
         
-        // Verificar NPSH disponível vs requerido
-        const npshRequired = interp(flowVal, data.vazao_data, data.npsh_curva);
+        // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
+        if (flowVal > 0 && headVal > 0) {
+            const expectedHead = interp(flowVal, data.vazao_data, data.altura_data);
+            const headDifference = Math.abs(headVal - expectedHead);
+            const headTolerance = Math.max(expectedHead * 0.2, 3); // 20% de tolerância ou mínimo 3m
+            
+            if (headDifference > headTolerance) {
+                warningMessage += "Ponto distante da curva característica da bomba. ";
+            }
+        }
+        
+        // Mensagens específicas para condições especiais
+        if (flowVal === 0 && headVal === 0) {
+            warningMessage += "Condição de parada total - bomba desligada. ";
+        } else if (flowVal === 0) {
+            warningMessage += "Condição de shutoff - válvula fechada. ";
+        } else if (headVal === 0) {
+            warningMessage += "Condição de descarga livre - sem pressão. ";
+        }
         
         if (warningMessage) {
             showStatus("Aviso: " + warningMessage.trim(), "warning");
