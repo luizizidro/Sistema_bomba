@@ -462,11 +462,12 @@ function calculateOperatingPoint() {
             showStatus("Ponto de operação calculado com sucesso.", "success");
         }
         
-        // Usar os valores das curvas da bomba para mostrar os pontos corretos no gráfico
+        // CORREÇÃO: Chamar a função para exibir o ponto de operação
         updateOperatingPointDisplay(flowVal, headVal, powerFromCurve, effFromCurve, npshFromCurve, headFromCurve);
         
     } catch (error) {
         showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
+        console.error("Erro no cálculo:", error);
     }
 }
 
