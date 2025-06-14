@@ -14,6 +14,33 @@ function linspace(start, stop, num) {
     return Array.from({length: num}, (_, i) => start + step * i);
 }
 
+// Função para calcular faixas dinâmicas
+function calculateDynamicRanges(data) {
+    const maxFlow = Math.max(...data.vazao_data);
+    const minFlow = Math.min(...data.vazao_data);
+    const maxHeight = Math.max(...data.altura_data);
+    const minHeight = Math.min(...data.altura_data);
+    
+    return {
+        flowRange: {
+            min: minFlow,
+            max: maxFlow,
+            recommended: {
+                min: maxFlow * 0.1, // 10% da vazão máxima
+                max: maxFlow * 0.9   // 90% da vazão máxima
+            }
+        },
+        heightRange: {
+            min: minHeight,
+            max: maxHeight,
+            recommended: {
+                min: maxHeight * 0.1, // 10% da altura máxima
+                max: maxHeight * 0.9   // 90% da altura máxima
+            }
+        }
+    };
+}
+
 // Dados das bombas com curvas mais realísticas
 const pumpData = {
     "BC-21 R 1/2 (3 CV)": {
@@ -43,6 +70,9 @@ const pumpData = {
         },
         get rendimento_curva() {
             return generateEfficiencyCurve(this.vazao_data, 25, 57.05);
+        },
+        get ranges() {
+            return calculateDynamicRanges(this);
         }
     },
     "BC-21 R 1/2 (4 CV)": {
@@ -69,6 +99,9 @@ const pumpData = {
         },
         get rendimento_curva() {
             return generateEfficiencyCurve(this.vazao_data, 30, 54.68);
+        },
+        get ranges() {
+            return calculateDynamicRanges(this);
         }
     },
     "Bomba Trabalho": {
@@ -95,6 +128,9 @@ const pumpData = {
         },
         get rendimento_curva() {
             return generateEfficiencyCurve(this.vazao_data, 75, 75);
+        },
+        get ranges() {
+            return calculateDynamicRanges(this);
         }
     }
 };
@@ -114,6 +150,36 @@ function interp(x, xp, fp) {
         }
     }
     return fp[fp.length - 1];
+}
+
+// Função para validar valores com base nas faixas dinâmicas
+function validateInputs(flowVal, headVal, ranges) {
+    let warnings = [];
+    let errors = [];
+    
+    // Validação de vazão
+    if (flowVal < 0) {
+        errors.push("Vazão não pode ser negativa.");
+    } else if (flowVal > ranges.flowRange.max * 1.3) {
+        errors.push(`Vazão muito alta (máximo recomendado: ${ranges.flowRange.max.toFixed(1)} m³/h).`);
+    } else if (flowVal > ranges.flowRange.max) {
+        warnings.push(`Vazão acima da faixa da bomba (máximo: ${ranges.flowRange.max.toFixed(1)} m³/h).`);
+    } else if (flowVal > 0 && flowVal < ranges.flowRange.recommended.min) {
+        warnings.push(`Vazão muito baixa (mínimo recomendado: ${ranges.flowRange.recommended.min.toFixed(1)} m³/h).`);
+    }
+    
+    // Validação de altura
+    if (headVal < 0) {
+        errors.push("Altura não pode ser negativa.");
+    } else if (headVal > ranges.heightRange.max * 1.3) {
+        errors.push(`Altura muito alta (máximo recomendado: ${ranges.heightRange.max.toFixed(1)} m).`);
+    } else if (headVal > ranges.heightRange.max) {
+        warnings.push(`Altura acima da faixa da bomba (máximo: ${ranges.heightRange.max.toFixed(1)} m).`);
+    } else if (headVal > 0 && headVal < ranges.heightRange.recommended.min) {
+        warnings.push(`Altura muito baixa (mínimo recomendado: ${ranges.heightRange.recommended.min.toFixed(1)} m).`);
+    }
+    
+    return { warnings, errors };
 }
 
 // Inicialização
@@ -251,6 +317,19 @@ function onPumpSelect() {
     document.getElementById('efficiencyInfo').textContent = `${data.rendimento_percent}%`;
     
     plotCurves();
+    updateScales();
+}
+
+function updateScales() {
+    const selectedPump = document.getElementById('pumpSelect').value;
+    const data = pumpData[selectedPump];
+    const ranges = data.ranges;
+    
+    // Atualizar escalas do gráfico dinamicamente
+    chart.options.scales.x.max = ranges.flowRange.max * 1.1;
+    chart.options.scales.y.max = ranges.heightRange.max * 1.1;
+    
+    chart.update();
 }
 
 function plotCurves() {
@@ -324,44 +403,19 @@ function calculateOperatingPoint() {
         const headVal = parseFloat(headInput);
         const selectedPump = document.getElementById('pumpSelect').value;
         const data = pumpData[selectedPump];
+        const ranges = data.ranges;
         
         if (isNaN(flowVal) || isNaN(headVal)) {
             showStatus("Erro: Valores inválidos inseridos.", "error");
             return;
         }
         
-        // Permitir valores baixos e zero
-        if (flowVal < 0 || headVal < 0) {
-            showStatus("Erro: Valores não podem ser negativos.", "error");
+        // Validar entradas com faixas dinâmicas
+        const validation = validateInputs(flowVal, headVal, ranges);
+        
+        if (validation.errors.length > 0) {
+            showStatus("Erro: " + validation.errors.join(" "), "error");
             return;
-        }
-        
-        // Verificar se os valores estão dentro da faixa da bomba (com tolerância para valores baixos)
-        const maxFlow = Math.max(...data.vazao_data);
-        const maxHead = Math.max(...data.altura_data);
-        
-        let warningMessage = "";
-        
-        // Avisos mais flexíveis para valores baixos
-        if (flowVal > maxFlow * 1.2) {
-            warningMessage += "Vazão muito alta para esta bomba. ";
-        } else if (flowVal > maxFlow) {
-            warningMessage += "Vazão acima da faixa recomendada. ";
-        }
-        
-        if (headVal > maxHead * 1.2) {
-            warningMessage += "Altura muito alta para esta bomba. ";
-        } else if (headVal > maxHead) {
-            warningMessage += "Altura acima da faixa recomendada. ";
-        }
-        
-        // Avisos específicos para valores muito baixos
-        if (flowVal > 0 && flowVal < maxFlow * 0.05) {
-            warningMessage += "Vazão muito baixa - verifique se é adequada para a aplicação. ";
-        }
-        
-        if (headVal > 0 && headVal < maxHead * 0.05) {
-            warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
         }
         
         // Calcular valores nas curvas da bomba para a vazão especificada
@@ -381,26 +435,28 @@ function calculateOperatingPoint() {
             headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
         }
         
+        let warningMessage = validation.warnings.join(" ");
+        
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
         if (flowVal > 0 && headVal > 0) {
             const headDifference = Math.abs(headVal - headFromCurve);
             const headTolerance = Math.max(headFromCurve * 0.2, 3); // 20% de tolerância ou mínimo 3m
             
             if (headDifference > headTolerance) {
-                warningMessage += `Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m). `;
+                warningMessage += ` Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m).`;
             }
         }
         
         // Mensagens específicas para condições especiais
         if (flowVal === 0 && headVal === 0) {
-            warningMessage += "Condição de parada total - bomba desligada. ";
+            warningMessage += " Condição de parada total - bomba desligada.";
         } else if (flowVal === 0) {
-            warningMessage += "Condição de shutoff - válvula fechada. ";
+            warningMessage += " Condição de shutoff - válvula fechada.";
         } else if (headVal === 0) {
-            warningMessage += "Condição de descarga livre - sem pressão. ";
+            warningMessage += " Condição de descarga livre - sem pressão.";
         }
         
-        if (warningMessage) {
+        if (warningMessage.trim()) {
             showStatus("Aviso: " + warningMessage.trim(), "warning");
         } else {
             showStatus("Ponto de operação calculado com sucesso.", "success");
