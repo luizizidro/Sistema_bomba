@@ -1,8 +1,10 @@
 // Função para gerar curva de rendimento
 function generateEfficiencyCurve(flowData, bepFlow, maxEfficiency) {
     return flowData.map(flow => {
-        const efficiency = maxEfficiency - Math.pow((flow - bepFlow) / bepFlow, 2) * maxEfficiency * 1.2;
-        return Math.max(0, efficiency);
+        const normalizedFlow = flow / bepFlow;
+        // Curva de rendimento mais realística com pico no BEP
+        const efficiency = maxEfficiency * (1 - 0.8 * Math.pow(normalizedFlow - 1, 2));
+        return Math.max(0, Math.min(efficiency, maxEfficiency));
     });
 }
 
@@ -12,7 +14,7 @@ function linspace(start, stop, num) {
     return Array.from({length: num}, (_, i) => start + step * i);
 }
 
-// Dados das bombas
+// Dados das bombas com curvas mais realísticas
 const pumpData = {
     "BC-21 R 1/2 (3 CV)": {
         potencia_cv: 3,
@@ -21,13 +23,23 @@ const pumpData = {
         rendimento_percent: 57.05,
         vazao_data: linspace(0, 42, 100),
         get altura_data() {
-            return this.vazao_data.map(q => -0.016 * q * q + 0.25 * q + 30);
+            // Curva H-Q mais realística: parabólica decrescente
+            return this.vazao_data.map(q => {
+                const h0 = 32; // Altura de shutoff
+                const qMax = 45; // Vazão máxima teórica
+                return h0 * (1 - Math.pow(q / qMax, 1.8));
+            });
         },
         get potencia_data() {
-            return this.vazao_data.map(q => -0.0025 * q * q + 0.18 * q + 0.8);
+            // Curva de potência crescente com a vazão
+            return this.vazao_data.map(q => {
+                const p0 = 0.8; // Potência mínima
+                return p0 + (q / 42) * 2.2 + 0.001 * q * q;
+            });
         },
         get npsh_curva() {
-            return this.vazao_data.map(() => Math.random() * 2 + 1.5);
+            // NPSH cresce com a vazão
+            return this.vazao_data.map(q => 1.5 + (q / 42) * 2.5 + 0.0008 * q * q);
         },
         get rendimento_curva() {
             return generateEfficiencyCurve(this.vazao_data, 25, 57.05);
@@ -40,13 +52,20 @@ const pumpData = {
         rendimento_percent: 54.68,
         vazao_data: linspace(0, 50, 100),
         get altura_data() {
-            return this.vazao_data.map(q => -0.014 * q * q + 0.1 * q + 41);
+            return this.vazao_data.map(q => {
+                const h0 = 42; // Altura de shutoff
+                const qMax = 55; // Vazão máxima teórica
+                return h0 * (1 - Math.pow(q / qMax, 1.8));
+            });
         },
         get potencia_data() {
-            return this.vazao_data.map(q => -0.001 * q * q + 0.1 * q + 1.5);
+            return this.vazao_data.map(q => {
+                const p0 = 1.2;
+                return p0 + (q / 50) * 2.8 + 0.0008 * q * q;
+            });
         },
         get npsh_curva() {
-            return this.vazao_data.map(() => Math.random() * 1.2 + 1.8);
+            return this.vazao_data.map(q => 1.8 + (q / 50) * 2.2 + 0.0006 * q * q);
         },
         get rendimento_curva() {
             return generateEfficiencyCurve(this.vazao_data, 30, 54.68);
@@ -57,18 +76,25 @@ const pumpData = {
         rotacao_rpm: 1700,
         npsh_mca: 25,
         rendimento_percent: 75,
-        vazao_data: linspace(0, 100, 100),
+        vazao_data: linspace(0, 120, 100),
         get altura_data() {
-            return this.vazao_data.map(q => -0.005 * q * q - 0.1 * q + 60);
+            return this.vazao_data.map(q => {
+                const h0 = 65; // Altura de shutoff
+                const qMax = 130; // Vazão máxima teórica
+                return h0 * (1 - Math.pow(q / qMax, 1.6));
+            });
         },
         get potencia_data() {
-            return this.vazao_data.map(q => -0.002 * q * q + 0.5 * q + 15);
+            return this.vazao_data.map(q => {
+                const p0 = 12;
+                return p0 + (q / 120) * 34.5 + 0.002 * q * q;
+            });
         },
         get npsh_curva() {
-            return this.vazao_data.map(() => Math.random() * 15 + 15);
+            return this.vazao_data.map(q => 15 + (q / 120) * 20 + 0.001 * q * q);
         },
         get rendimento_curva() {
-            return generateEfficiencyCurve(this.vazao_data, 65, 75);
+            return generateEfficiencyCurve(this.vazao_data, 75, 75);
         }
     }
 };
@@ -118,7 +144,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     position: 'right',
                     labels: {
                         usePointStyle: true,
-                        padding: 20
+                        padding: 20,
+                        filter: function(legendItem, chartData) {
+                            // Ocultar legendas vazias dos pontos de operação
+                            return legendItem.text !== '';
+                        }
                     }
                 }
             },
@@ -231,7 +261,8 @@ function plotCurves() {
             yAxisID: 'y',
             fill: false,
             pointRadius: 0,
-            pointHoverRadius: 4
+            pointHoverRadius: 4,
+            borderWidth: 2
         },
         {
             label: 'Potência (CV)',
@@ -241,7 +272,8 @@ function plotCurves() {
             yAxisID: 'y1',
             fill: false,
             pointRadius: 0,
-            pointHoverRadius: 4
+            pointHoverRadius: 4,
+            borderWidth: 2
         },
         {
             label: 'NPSH (mca)',
@@ -251,7 +283,8 @@ function plotCurves() {
             yAxisID: 'y2',
             fill: false,
             pointRadius: 0,
-            pointHoverRadius: 4
+            pointHoverRadius: 4,
+            borderWidth: 2
         },
         {
             label: 'Rendimento (%)',
@@ -261,7 +294,8 @@ function plotCurves() {
             yAxisID: 'y3',
             fill: false,
             pointRadius: 0,
-            pointHoverRadius: 4
+            pointHoverRadius: 4,
+            borderWidth: 2
         }
     ];
     
@@ -291,18 +325,25 @@ function calculateOperatingPoint() {
             return;
         }
         
+        if (flowVal <= 0 || headVal <= 0) {
+            showStatus("Erro: Valores devem ser positivos.", "error");
+            return;
+        }
+        
         // Verificar se os valores estão dentro da faixa da bomba
         const minFlow = Math.min(...data.vazao_data);
         const maxFlow = Math.max(...data.vazao_data);
         const minHead = Math.min(...data.altura_data);
         const maxHead = Math.max(...data.altura_data);
         
+        let warningMessage = "";
+        
         if (flowVal < minFlow || flowVal > maxFlow) {
-            showStatus("Aviso: Vazão fora da faixa recomendada da bomba.", "warning");
+            warningMessage += "Vazão fora da faixa recomendada. ";
         }
         
         if (headVal < minHead || headVal > maxHead) {
-            showStatus("Aviso: Altura fora da faixa recomendada da bomba.", "warning");
+            warningMessage += "Altura fora da faixa recomendada. ";
         }
         
         // Calcular potência e rendimento no ponto especificado
@@ -312,55 +353,80 @@ function calculateOperatingPoint() {
         // Verificar se o ponto está próximo da curva característica
         const expectedHead = interp(flowVal, data.vazao_data, data.altura_data);
         const headDifference = Math.abs(headVal - expectedHead);
-        const headTolerance = expectedHead * 0.1; // 10% de tolerância
+        const headTolerance = Math.max(expectedHead * 0.15, 2); // 15% de tolerância ou mínimo 2m
         
         if (headDifference > headTolerance) {
-            showStatus("Aviso: O ponto especificado está distante da curva característica da bomba.", "warning");
+            warningMessage += "Ponto distante da curva característica da bomba. ";
+        }
+        
+        // Verificar NPSH disponível vs requerido
+        const npshRequired = interp(flowVal, data.vazao_data, data.npsh_curva);
+        
+        if (warningMessage) {
+            showStatus("Aviso: " + warningMessage.trim(), "warning");
         } else {
             showStatus("Ponto de operação calculado com sucesso.", "success");
         }
         
-        updateOperatingPointDisplay(flowVal, headVal, powerVal, effVal);
+        updateOperatingPointDisplay(flowVal, headVal, powerVal, effVal, npshRequired);
         
     } catch (error) {
         showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
     }
 }
 
-function updateOperatingPointDisplay(flow, head, power, efficiency) {
+function updateOperatingPointDisplay(flow, head, power, efficiency, npshRequired) {
     clearOperatingPoint();
     
-    // Adicionar pontos de operação ao gráfico
+    // Adicionar pontos de operação ao gráfico com melhor visualização
     const operatingPoints = [
         {
-            label: 'Ponto de Operação',
+            label: 'Ponto de Operação - Altura',
             data: [{x: flow, y: head}],
             borderColor: 'black',
-            backgroundColor: 'black',
+            backgroundColor: 'yellow',
             yAxisID: 'y',
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            showLine: false
+            pointRadius: 10,
+            pointHoverRadius: 12,
+            showLine: false,
+            pointBorderWidth: 3,
+            pointBorderColor: 'black'
         },
         {
             label: '',
             data: [{x: flow, y: power}],
             borderColor: 'black',
-            backgroundColor: 'black',
+            backgroundColor: 'yellow',
             yAxisID: 'y1',
             pointRadius: 8,
             pointHoverRadius: 10,
-            showLine: false
+            showLine: false,
+            pointBorderWidth: 2,
+            pointBorderColor: 'black'
+        },
+        {
+            label: '',
+            data: [{x: flow, y: npshRequired}],
+            borderColor: 'black',
+            backgroundColor: 'yellow',
+            yAxisID: 'y2',
+            pointRadius: 8,
+            pointHoverRadius: 10,
+            showLine: false,
+            pointBorderWidth: 2,
+            pointBorderColor: 'black'
         },
         {
             label: '',
             data: [{x: flow, y: efficiency}],
             borderColor: 'black',
-            backgroundColor: 'black',
+            backgroundColor: 'yellow',
             yAxisID: 'y3',
             pointRadius: 8,
             pointHoverRadius: 10,
-            showLine: false
+            showLine: false,
+            pointBorderWidth: 2,
+            pointBorderColor: 'black'
         }
     ];
     
