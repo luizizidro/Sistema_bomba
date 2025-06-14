@@ -337,9 +337,7 @@ function calculateOperatingPoint() {
         }
         
         // Verificar se os valores estão dentro da faixa da bomba (com tolerância para valores baixos)
-        const minFlow = 0; // Permitir vazão zero
         const maxFlow = Math.max(...data.vazao_data);
-        const minHead = 0; // Permitir altura zero
         const maxHead = Math.max(...data.altura_data);
         
         let warningMessage = "";
@@ -366,28 +364,30 @@ function calculateOperatingPoint() {
             warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
         }
         
-        // Calcular potência e rendimento no ponto especificado
-        let powerVal, effVal, npshRequired;
+        // Calcular valores nas curvas da bomba para a vazão especificada
+        let powerFromCurve, effFromCurve, npshFromCurve, headFromCurve;
         
         if (flowVal === 0) {
             // Condições especiais para vazão zero (shutoff)
-            powerVal = data.potencia_data[0]; // Potência no shutoff
-            effVal = 0; // Rendimento zero em shutoff
-            npshRequired = data.npsh_curva[0]; // NPSH mínimo
+            powerFromCurve = data.potencia_data[0]; // Potência no shutoff
+            effFromCurve = 0; // Rendimento zero em shutoff
+            npshFromCurve = data.npsh_curva[0]; // NPSH mínimo
+            headFromCurve = data.altura_data[0]; // Altura de shutoff
         } else {
-            powerVal = interp(flowVal, data.vazao_data, data.potencia_data);
-            effVal = interp(flowVal, data.vazao_data, data.rendimento_curva);
-            npshRequired = interp(flowVal, data.vazao_data, data.npsh_curva);
+            // Interpolar valores das curvas para a vazão especificada
+            powerFromCurve = interp(flowVal, data.vazao_data, data.potencia_data);
+            effFromCurve = interp(flowVal, data.vazao_data, data.rendimento_curva);
+            npshFromCurve = interp(flowVal, data.vazao_data, data.npsh_curva);
+            headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
         }
         
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
         if (flowVal > 0 && headVal > 0) {
-            const expectedHead = interp(flowVal, data.vazao_data, data.altura_data);
-            const headDifference = Math.abs(headVal - expectedHead);
-            const headTolerance = Math.max(expectedHead * 0.2, 3); // 20% de tolerância ou mínimo 3m
+            const headDifference = Math.abs(headVal - headFromCurve);
+            const headTolerance = Math.max(headFromCurve * 0.2, 3); // 20% de tolerância ou mínimo 3m
             
             if (headDifference > headTolerance) {
-                warningMessage += "Ponto distante da curva característica da bomba. ";
+                warningMessage += `Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m). `;
             }
         }
         
@@ -406,29 +406,47 @@ function calculateOperatingPoint() {
             showStatus("Ponto de operação calculado com sucesso.", "success");
         }
         
-        updateOperatingPointDisplay(flowVal, headVal, powerVal, effVal, npshRequired);
+        // Usar os valores das curvas da bomba para mostrar os pontos corretos no gráfico
+        updateOperatingPointDisplay(flowVal, headVal, powerFromCurve, effFromCurve, npshFromCurve, headFromCurve);
         
     } catch (error) {
         showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
     }
 }
 
-function updateOperatingPointDisplay(flow, head, power, efficiency, npshRequired) {
+function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequired, curveHead) {
     clearOperatingPoint();
     
-    // Adicionar pontos de operação ao gráfico com melhor visualização
-    const operatingPoints = [
+    // Adicionar pontos de operação ao gráfico
+    // Ponto do usuário (altura especificada pelo usuário)
+    const userPoint = {
+        label: 'Ponto Especificado',
+        data: [{x: flow, y: userHead}],
+        borderColor: 'red',
+        backgroundColor: 'red',
+        yAxisID: 'y',
+        pointRadius: 10,
+        pointHoverRadius: 12,
+        showLine: false,
+        pointBorderWidth: 3,
+        pointBorderColor: 'darkred',
+        pointStyle: 'circle'
+    };
+    
+    // Pontos nas curvas da bomba (valores reais das curvas)
+    const curvePoints = [
         {
-            label: 'Ponto de Operação - Altura',
-            data: [{x: flow, y: head}],
+            label: 'Ponto na Curva H-Q',
+            data: [{x: flow, y: curveHead}],
             borderColor: 'black',
             backgroundColor: 'yellow',
             yAxisID: 'y',
-            pointRadius: 10,
-            pointHoverRadius: 12,
+            pointRadius: 8,
+            pointHoverRadius: 10,
             showLine: false,
-            pointBorderWidth: 3,
-            pointBorderColor: 'black'
+            pointBorderWidth: 2,
+            pointBorderColor: 'black',
+            pointStyle: 'triangle'
         },
         {
             label: '',
@@ -440,7 +458,8 @@ function updateOperatingPointDisplay(flow, head, power, efficiency, npshRequired
             pointHoverRadius: 10,
             showLine: false,
             pointBorderWidth: 2,
-            pointBorderColor: 'black'
+            pointBorderColor: 'black',
+            pointStyle: 'triangle'
         },
         {
             label: '',
@@ -452,7 +471,8 @@ function updateOperatingPointDisplay(flow, head, power, efficiency, npshRequired
             pointHoverRadius: 10,
             showLine: false,
             pointBorderWidth: 2,
-            pointBorderColor: 'black'
+            pointBorderColor: 'black',
+            pointStyle: 'triangle'
         },
         {
             label: '',
@@ -464,18 +484,36 @@ function updateOperatingPointDisplay(flow, head, power, efficiency, npshRequired
             pointHoverRadius: 10,
             showLine: false,
             pointBorderWidth: 2,
-            pointBorderColor: 'black'
+            pointBorderColor: 'black',
+            pointStyle: 'triangle'
         }
     ];
     
-    operatingPointDatasets = operatingPoints;
-    chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPoints];
+    // Adicionar linha vertical para mostrar a vazão
+    const verticalLine = {
+        label: '',
+        data: [
+            {x: flow, y: 0},
+            {x: flow, y: Math.max(curveHead, userHead) * 1.1}
+        ],
+        borderColor: 'rgba(128, 128, 128, 0.5)',
+        backgroundColor: 'transparent',
+        yAxisID: 'y',
+        borderWidth: 1,
+        borderDash: [5, 5],
+        pointRadius: 0,
+        showLine: true,
+        fill: false
+    };
     
-    // Atualizar resultados
+    operatingPointDatasets = [userPoint, ...curvePoints, verticalLine];
+    chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPointDatasets];
+    
+    // Atualizar resultados com valores das curvas da bomba
     document.getElementById('flowResult').textContent = `Vazão (m³/h): ${flow.toFixed(2)}`;
-    document.getElementById('headResult').textContent = `Altura (m): ${head.toFixed(2)}`;
-    document.getElementById('powerResult').textContent = `Potência Resultante (CV): ${power.toFixed(3)}`;
-    document.getElementById('efficiencyResult').textContent = `Rendimento no Ponto (%): ${efficiency.toFixed(2)}`;
+    document.getElementById('headResult').textContent = `Altura Especificada (m): ${userHead.toFixed(2)} | Altura da Curva (m): ${curveHead.toFixed(2)}`;
+    document.getElementById('powerResult').textContent = `Potência da Curva (CV): ${power.toFixed(3)}`;
+    document.getElementById('efficiencyResult').textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
     
     chart.update();
 }
