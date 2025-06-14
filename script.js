@@ -4,19 +4,23 @@ function generateEfficiencyCurve(flowData, bepFlow, maxEfficiency) {
         if (flow === 0) return 0; // Rendimento zero em shutoff
         
         const normalizedFlow = flow / bepFlow;
-        // Curva de rendimento mais realística baseada em bombas centrífugas reais
+        
+        // Curva de rendimento realística - formato de sino
+        // Baseada na equação típica de bombas centrífugas
         let efficiency;
         
-        if (normalizedFlow <= 0.3) {
-            // Região de baixa vazão - rendimento baixo
-            efficiency = maxEfficiency * (normalizedFlow / 0.3) * 0.4;
-        } else if (normalizedFlow <= 1.2) {
-            // Região operacional normal - curva parabólica com pico no BEP
-            const deviation = Math.abs(normalizedFlow - 1);
-            efficiency = maxEfficiency * (1 - 0.6 * Math.pow(deviation, 1.5));
+        if (normalizedFlow <= 0.1) {
+            // Região muito baixa - crescimento linear suave
+            efficiency = maxEfficiency * normalizedFlow * 2;
+        } else if (normalizedFlow <= 1.5) {
+            // Região principal - curva parabólica com pico no BEP
+            const a = -0.4; // Coeficiente que controla a largura da curva
+            const deviation = normalizedFlow - 1; // Desvio do BEP
+            efficiency = maxEfficiency * (1 + a * Math.pow(deviation, 2));
         } else {
             // Região de alta vazão - queda mais acentuada
-            efficiency = maxEfficiency * (1 - 0.8 * Math.pow(normalizedFlow - 1, 2));
+            const deviation = normalizedFlow - 1;
+            efficiency = maxEfficiency * (1 - 0.6 * Math.pow(deviation, 1.5));
         }
         
         return Math.max(0, Math.min(efficiency, maxEfficiency));
