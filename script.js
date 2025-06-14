@@ -8,26 +8,62 @@ function generateEfficiencyCurve(flowData, bepFlow, maxEfficiency) {
     });
 }
 
-// Função para gerar dados de vazão
+// Função para gerar dados de vazão com range estendido
 function linspace(start, stop, num) {
     const step = (stop - start) / (num - 1);
     return Array.from({length: num}, (_, i) => start + step * i);
 }
 
-// Dados das bombas com curvas mais realísticas
+// Função para calcular valores das curvas para qualquer vazão
+function calculateCurveValue(flow, pumpName, curveType) {
+    const data = pumpData[pumpName];
+    
+    // Se a vazão está dentro do range dos dados, interpola normalmente
+    if (flow <= Math.max(...data.vazao_data)) {
+        return interp(flow, data.vazao_data, data[curveType]);
+    }
+    
+    // Para vazões muito altas, extrapola usando a tendência da curva
+    const lastTwoPoints = data.vazao_data.slice(-2);
+    const lastTwoValues = data[curveType].slice(-2);
+    
+    const slope = (lastTwoValues[1] - lastTwoValues[0]) / (lastTwoPoints[1] - lastTwoPoints[0]);
+    const extrapolatedValue = lastTwoValues[1] + slope * (flow - lastTwoPoints[1]);
+    
+    // Aplicar limites físicos realistas
+    switch(curveType) {
+        case 'altura_data':
+            return Math.max(0, extrapolatedValue); // Altura não pode ser negativa
+        case 'potencia_data':
+            // Potência cresce com vazão, mas com limite superior realista
+            return Math.max(0, Math.min(extrapolatedValue, data.potencia_cv * 3));
+        case 'npsh_curva':
+            return Math.max(0, extrapolatedValue); // NPSH sempre positivo
+        case 'rendimento_curva':
+            // Rendimento diminui drasticamente em vazões muito altas
+            const maxFlow = Math.max(...data.vazao_data);
+            const overFlowRatio = flow / maxFlow;
+            const penaltyFactor = Math.max(0.1, 1 / Math.pow(overFlowRatio, 0.5));
+            return Math.max(0, Math.min(extrapolatedValue * penaltyFactor, data.rendimento_percent));
+        default:
+            return extrapolatedValue;
+    }
+}
+
+// Dados das bombas com curvas mais realísticas e range estendido
 const pumpData = {
     "BC-21 R 1/2 (3 CV)": {
         potencia_cv: 3,
         rotacao_rpm: 3500,
         npsh_mca: 2.87,
         rendimento_percent: 57.05,
-        vazao_data: linspace(0, 42, 100),
+        vazao_data: linspace(0, 60, 150), // Aumentado o range
         get altura_data() {
             // Curva H-Q mais realística: parabólica decrescente
             return this.vazao_data.map(q => {
                 const h0 = 32; // Altura de shutoff
-                const qMax = 45; // Vazão máxima teórica
-                return h0 * (1 - Math.pow(q / qMax, 1.8));
+                const qMax = 50; // Vazão onde altura chega próximo de zero
+                return Math.max(0, h0 * (1 - Math.pow(q / qMax, 1.8)));
             });
         },
         get potencia_data() {
@@ -50,12 +86,12 @@ const pumpData = {
         rotacao_rpm: 3500,
         npsh_mca: 2.87,
         rendimento_percent: 54.68,
-        vazao_data: linspace(0, 50, 100),
+        vazao_data: linspace(0, 70, 150), // Aumentado o range
         get altura_data() {
             return this.vazao_data.map(q => {
                 const h0 = 42; // Altura de shutoff
-                const qMax = 55; // Vazão máxima teórica
-                return h0 * (1 - Math.pow(q / qMax, 1.8));
+                const qMax = 60; // Vazão onde altura chega próximo de zero
+                return Math.max(0, h0 * (1 - Math.pow(q / qMax, 1.8)));
             });
         },
         get potencia_data() {
@@ -76,12 +112,12 @@ const pumpData = {
         rotacao_rpm: 1700,
         npsh_mca: 25,
         rendimento_percent: 75,
-        vazao_data: linspace(0, 120, 100),
+        vazao_data: linspace(0, 180, 150), // Aumentado o range
         get altura_data() {
             return this.vazao_data.map(q => {
                 const h0 = 65; // Altura de shutoff
-                const qMax = 130; // Vazão máxima teórica
-                return h0 * (1 - Math.pow(q / qMax, 1.6));
+                const qMax = 150; // Vazão onde altura chega próximo de zero
+                return Math.max(0, h0 * (1 - Math.pow(q / qMax, 1.6)));
             });
         },
         get potencia_data() {
@@ -102,7 +138,7 @@ const pumpData = {
 let chart;
 let operatingPointDatasets = [];
 
-// Função de interpolação linear
+// Função de interpolação linear melhorada
 function interp(x, xp, fp) {
     if (x <= xp[0]) return fp[0];
     if (x >= xp[xp.length - 1]) return fp[fp.length - 1];
@@ -336,33 +372,7 @@ function calculateOperatingPoint() {
             return;
         }
         
-        // Verificar se os valores estão dentro da faixa da bomba (com tolerância para valores baixos)
-        const maxFlow = Math.max(...data.vazao_data);
-        const maxHead = Math.max(...data.altura_data);
-        
         let warningMessage = "";
-        
-        // Avisos mais flexíveis para valores baixos
-        if (flowVal > maxFlow * 1.2) {
-            warningMessage += "Vazão muito alta para esta bomba. ";
-        } else if (flowVal > maxFlow) {
-            warningMessage += "Vazão acima da faixa recomendada. ";
-        }
-        
-        if (headVal > maxHead * 1.2) {
-            warningMessage += "Altura muito alta para esta bomba. ";
-        } else if (headVal > maxHead) {
-            warningMessage += "Altura acima da faixa recomendada. ";
-        }
-        
-        // Avisos específicos para valores muito baixos
-        if (flowVal > 0 && flowVal < maxFlow * 0.05) {
-            warningMessage += "Vazão muito baixa - verifique se é adequada para a aplicação. ";
-        }
-        
-        if (headVal > 0 && headVal < maxHead * 0.05) {
-            warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
-        }
         
         // Calcular valores nas curvas da bomba para a vazão especificada
         let powerFromCurve, effFromCurve, npshFromCurve, headFromCurve;
@@ -374,17 +384,40 @@ function calculateOperatingPoint() {
             npshFromCurve = data.npsh_curva[0]; // NPSH mínimo
             headFromCurve = data.altura_data[0]; // Altura de shutoff
         } else {
-            // Interpolar valores das curvas para a vazão especificada
-            powerFromCurve = interp(flowVal, data.vazao_data, data.potencia_data);
-            effFromCurve = interp(flowVal, data.vazao_data, data.rendimento_curva);
-            npshFromCurve = interp(flowVal, data.vazao_data, data.npsh_curva);
-            headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
+            // Para vazões altas, usar função de cálculo estendida
+            powerFromCurve = calculateCurveValue(flowVal, selectedPump, 'potencia_data');
+            effFromCurve = calculateCurveValue(flowVal, selectedPump, 'rendimento_curva');
+            npshFromCurve = calculateCurveValue(flowVal, selectedPump, 'npsh_curva');
+            headFromCurve = calculateCurveValue(flowVal, selectedPump, 'altura_data');
+        }
+        
+        // Verificações e avisos
+        const maxFlowInData = Math.max(...data.vazao_data);
+        const maxHeadInData = Math.max(...data.altura_data);
+        
+        if (flowVal > maxFlowInData * 1.5) {
+            warningMessage += "Vazão muito alta - operação fora da faixa recomendada. ";
+        } else if (flowVal > maxFlowInData) {
+            warningMessage += "Vazão acima da faixa de dados - valores extrapolados. ";
+        }
+        
+        if (headVal > maxHeadInData * 1.2) {
+            warningMessage += "Altura muito alta para esta bomba. ";
+        }
+        
+        // Avisos específicos para valores muito baixos
+        if (flowVal > 0 && flowVal < maxFlowInData * 0.05) {
+            warningMessage += "Vazão muito baixa - verifique se é adequada para a aplicação. ";
+        }
+        
+        if (headVal > 0 && headVal < maxHeadInData * 0.05) {
+            warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
         }
         
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
         if (flowVal > 0 && headVal > 0) {
             const headDifference = Math.abs(headVal - headFromCurve);
-            const headTolerance = Math.max(headFromCurve * 0.2, 3); // 20% de tolerância ou mínimo 3m
+            const headTolerance = Math.max(headFromCurve * 0.3, 5); // 30% de tolerância ou mínimo 5m
             
             if (headDifference > headTolerance) {
                 warningMessage += `Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m). `;
@@ -398,6 +431,11 @@ function calculateOperatingPoint() {
             warningMessage += "Condição de shutoff - válvula fechada. ";
         } else if (headVal === 0) {
             warningMessage += "Condição de descarga livre - sem pressão. ";
+        }
+        
+        // Avisos para vazões muito altas
+        if (flowVal > maxFlowInData * 2) {
+            warningMessage += "ATENÇÃO: Vazão extremamente alta - bomba pode não conseguir operar nesta condição. ";
         }
         
         if (warningMessage) {
@@ -416,6 +454,12 @@ function calculateOperatingPoint() {
 
 function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequired, curveHead) {
     clearOperatingPoint();
+    
+    // Ajustar escala do gráfico se necessário para vazões altas
+    const currentMaxX = chart.scales.x.max || 0;
+    if (flow > currentMaxX) {
+        chart.options.scales.x.max = flow * 1.1;
+    }
     
     // Adicionar pontos de operação ao gráfico
     // Ponto do usuário (altura especificada pelo usuário)
@@ -490,11 +534,12 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
     ];
     
     // Adicionar linha vertical para mostrar a vazão
+    const maxY = Math.max(curveHead, userHead, power, efficiency, npshRequired);
     const verticalLine = {
         label: '',
         data: [
             {x: flow, y: 0},
-            {x: flow, y: Math.max(curveHead, userHead) * 1.1}
+            {x: flow, y: maxY * 1.1}
         ],
         borderColor: 'rgba(128, 128, 128, 0.5)',
         backgroundColor: 'transparent',
@@ -532,6 +577,10 @@ function clearAll() {
     
     clearOperatingPoint();
     clearResults();
+    
+    // Resetar escala do gráfico
+    chart.options.scales.x.max = undefined;
+    chart.update();
 }
 
 function clearResults() {
