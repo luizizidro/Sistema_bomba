@@ -1,26 +1,30 @@
-// Função para gerar curva de rendimento realística
+// Função para gerar curva de rendimento realística e precisa
 function generateEfficiencyCurve(flowData, bepFlow, maxEfficiency) {
     return flowData.map(flow => {
         if (flow === 0) return 0; // Rendimento zero em shutoff
         
         const normalizedFlow = flow / bepFlow;
-        
-        // Curva de rendimento realística - formato de sino
-        // Baseada na equação típica de bombas centrífugas
         let efficiency;
         
-        if (normalizedFlow <= 0.1) {
-            // Região muito baixa - crescimento linear suave
-            efficiency = maxEfficiency * normalizedFlow * 2;
-        } else if (normalizedFlow <= 1.5) {
-            // Região principal - curva parabólica com pico no BEP
-            const a = -0.4; // Coeficiente que controla a largura da curva
+        if (normalizedFlow <= 0.05) {
+            // Região muito baixa - crescimento linear suave (0-5% do BEP)
+            efficiency = maxEfficiency * normalizedFlow * 8; // Crescimento mais rápido
+        } else if (normalizedFlow <= 1.8) {
+            // Região principal - curva gaussiana modificada (5-180% do BEP)
             const deviation = normalizedFlow - 1; // Desvio do BEP
-            efficiency = maxEfficiency * (1 + a * Math.pow(deviation, 2));
+            const sigma = 0.6; // Controla a largura da curva (menor = mais estreita)
+            
+            // Curva gaussiana modificada para formato de sino realístico
+            efficiency = maxEfficiency * Math.exp(-0.5 * Math.pow(deviation / sigma, 2));
+            
+            // Ajuste para garantir pico exato no BEP
+            if (Math.abs(deviation) < 0.01) {
+                efficiency = maxEfficiency;
+            }
         } else {
-            // Região de alta vazão - queda mais acentuada
-            const deviation = normalizedFlow - 1;
-            efficiency = maxEfficiency * (1 - 0.6 * Math.pow(deviation, 1.5));
+            // Região de alta vazão - queda exponencial (>180% do BEP)
+            const excessFlow = normalizedFlow - 1.8;
+            efficiency = maxEfficiency * Math.exp(-0.5 * Math.pow(0.8 / 0.6, 2)) * Math.exp(-2 * excessFlow);
         }
         
         return Math.max(0, Math.min(efficiency, maxEfficiency));
@@ -40,7 +44,7 @@ const pumpData = {
         rotacao_rpm: 3500,
         npsh_mca: 2.87,
         rendimento_percent: 57.05,
-        vazao_data: linspace(0, 42, 150), // Mais pontos para maior precisão
+        vazao_data: linspace(0, 42, 200), // Mais pontos para maior precisão
         get altura_data() {
             // Curva H-Q típica de bomba centrífuga - parabólica decrescente
             return this.vazao_data.map(q => {
@@ -89,7 +93,7 @@ const pumpData = {
         rotacao_rpm: 3500,
         npsh_mca: 2.87,
         rendimento_percent: 54.68,
-        vazao_data: linspace(0, 50, 150),
+        vazao_data: linspace(0, 50, 200),
         get altura_data() {
             return this.vazao_data.map(q => {
                 if (q === 0) return 42; // Altura de shutoff
@@ -132,7 +136,7 @@ const pumpData = {
         rotacao_rpm: 1700,
         npsh_mca: 25,
         rendimento_percent: 75,
-        vazao_data: linspace(0, 120, 150),
+        vazao_data: linspace(0, 120, 200),
         get altura_data() {
             return this.vazao_data.map(q => {
                 if (q === 0) return 65; // Altura de shutoff
