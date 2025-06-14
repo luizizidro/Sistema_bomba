@@ -269,88 +269,61 @@ function plotCurves() {
     chart.update();
 }
 
-function updateFromFlow() {
+function calculateOperatingPoint() {
     clearOperatingPoint();
+    
+    const flowInput = document.getElementById('flowInput').value;
+    const headInput = document.getElementById('headInput').value;
+    
+    if (!flowInput || !headInput) {
+        showStatus("Erro: Insira valores para vazão e altura.", "error");
+        return;
+    }
+    
     try {
-        const flowVal = parseFloat(document.getElementById('flowInput').value);
+        const flowVal = parseFloat(flowInput);
+        const headVal = parseFloat(headInput);
         const selectedPump = document.getElementById('pumpSelect').value;
         const data = pumpData[selectedPump];
         
-        if (isNaN(flowVal)) {
-            clearResults("Erro: Entrada de vazão inválida.");
+        if (isNaN(flowVal) || isNaN(headVal)) {
+            showStatus("Erro: Valores inválidos inseridos.", "error");
             return;
         }
         
+        // Verificar se os valores estão dentro da faixa da bomba
         const minFlow = Math.min(...data.vazao_data);
         const maxFlow = Math.max(...data.vazao_data);
+        const minHead = Math.min(...data.altura_data);
+        const maxHead = Math.max(...data.altura_data);
         
         if (flowVal < minFlow || flowVal > maxFlow) {
-            clearResults("Erro: Vazão fora da faixa da curva.");
-            return;
+            showStatus("Aviso: Vazão fora da faixa recomendada da bomba.", "warning");
         }
         
-        const headVal = interp(flowVal, data.vazao_data, data.altura_data);
+        if (headVal < minHead || headVal > maxHead) {
+            showStatus("Aviso: Altura fora da faixa recomendada da bomba.", "warning");
+        }
+        
+        // Calcular potência e rendimento no ponto especificado
         const powerVal = interp(flowVal, data.vazao_data, data.potencia_data);
         const effVal = interp(flowVal, data.vazao_data, data.rendimento_curva);
         
-        document.getElementById('headInput').value = headVal.toFixed(2);
+        // Verificar se o ponto está próximo da curva característica
+        const expectedHead = interp(flowVal, data.vazao_data, data.altura_data);
+        const headDifference = Math.abs(headVal - expectedHead);
+        const headTolerance = expectedHead * 0.1; // 10% de tolerância
+        
+        if (headDifference > headTolerance) {
+            showStatus("Aviso: O ponto especificado está distante da curva característica da bomba.", "warning");
+        } else {
+            showStatus("Ponto de operação calculado com sucesso.", "success");
+        }
         
         updateOperatingPointDisplay(flowVal, headVal, powerVal, effVal);
         
     } catch (error) {
-        clearResults("Erro: Entrada de vazão inválida.");
-    }
-}
-
-function updateFromHead() {
-    clearOperatingPoint();
-    try {
-        const headVal = parseFloat(document.getElementById('headInput').value);
-        const selectedPump = document.getElementById('pumpSelect').value;
-        const data = pumpData[selectedPump];
-        
-        if (isNaN(headVal)) {
-            clearResults("Erro: Entrada de altura inválida.");
-            return;
-        }
-        
-        const headCurve = data.altura_data;
-        const flowCurve = data.vazao_data;
-        
-        // Encontrar o ponto de altura máxima
-        let maxHeadIndex = 0;
-        for (let i = 1; i < headCurve.length; i++) {
-            if (headCurve[i] > headCurve[maxHeadIndex]) {
-                maxHeadIndex = i;
-            }
-        }
-        
-        // Usar apenas a parte estável da curva (após o pico)
-        const stableHeadCurve = headCurve.slice(maxHeadIndex);
-        const stableFlowCurve = flowCurve.slice(maxHeadIndex);
-        
-        const minH = Math.min(...stableHeadCurve);
-        const maxH = Math.max(...stableHeadCurve);
-        
-        if (headVal < minH - 1e-6 || headVal > maxH + 1e-6) {
-            clearResults("Erro: Altura fora da faixa operacional da curva.");
-            return;
-        }
-        
-        // Inverter arrays para interpolação
-        const reversedHeadCurve = [...stableHeadCurve].reverse();
-        const reversedFlowCurve = [...stableFlowCurve].reverse();
-        
-        const flowVal = interp(headVal, reversedHeadCurve, reversedFlowCurve);
-        const powerVal = interp(flowVal, flowCurve, data.potencia_data);
-        const effVal = interp(flowVal, flowCurve, data.rendimento_curva);
-        
-        document.getElementById('flowInput').value = flowVal.toFixed(2);
-        
-        updateOperatingPointDisplay(flowVal, headVal, powerVal, effVal);
-        
-    } catch (error) {
-        clearResults("Erro: Entrada de altura inválida.");
+        showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
     }
 }
 
@@ -411,23 +384,25 @@ function clearOperatingPoint() {
     }
 }
 
-function clearResults(error = null) {
+function clearAll() {
     document.getElementById('flowInput').value = '';
     document.getElementById('headInput').value = '';
     
     clearOperatingPoint();
-    
-    if (error) {
-        document.getElementById('flowResult').textContent = error;
-        document.getElementById('flowResult').className = 'error';
-        document.getElementById('headResult').textContent = '';
-        document.getElementById('powerResult').textContent = '';
-        document.getElementById('efficiencyResult').textContent = '';
-    } else {
-        document.getElementById('flowResult').textContent = 'Vazão (m³/h): -';
-        document.getElementById('flowResult').className = '';
-        document.getElementById('headResult').textContent = 'Altura (m): -';
-        document.getElementById('powerResult').textContent = 'Potência Resultante (CV): -';
-        document.getElementById('efficiencyResult').textContent = 'Rendimento no Ponto (%): -';
-    }
+    clearResults();
+}
+
+function clearResults() {
+    document.getElementById('flowResult').textContent = 'Vazão (m³/h): -';
+    document.getElementById('headResult').textContent = 'Altura (m): -';
+    document.getElementById('powerResult').textContent = 'Potência Resultante (CV): -';
+    document.getElementById('efficiencyResult').textContent = 'Rendimento no Ponto (%): -';
+    document.getElementById('statusResult').textContent = '';
+    document.getElementById('statusResult').className = 'status-message';
+}
+
+function showStatus(message, type) {
+    const statusElement = document.getElementById('statusResult');
+    statusElement.textContent = message;
+    statusElement.className = `status-message ${type}`;
 }

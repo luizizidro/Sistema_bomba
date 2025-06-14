@@ -48,18 +48,20 @@
                 </div>
                 
                 <div class="section">
-                    <h3>Calcular Ponto de Operação</h3>
+                    <h3>Definir Ponto de Operação</h3>
                     <div class="form-group">
                         <label for="flowInput">Vazão (m³/h):</label>
                         <input type="number" id="flowInput" step="0.01">
-                        <button onclick="updateFromFlow()">OK</button>
                     </div>
                     <div class="form-group">
                         <label for="headInput">Altura (m):</label>
                         <input type="number" id="headInput" step="0.01">
-                        <button onclick="updateFromHead()">OK</button>
                     </div>
-                    <p class="note">Nota: Vazão e Altura são interligadas. Ao calcular um valor, o outro é preenchido automaticamente.</p>
+                    <div class="form-group">
+                        <button onclick="calculateOperatingPoint()" class="calculate-btn">Calcular Ponto</button>
+                        <button onclick="clearAll()" class="clear-btn">Limpar</button>
+                    </div>
+                    <p class="note">Nota: Insira os valores de vazão e altura desejados e clique em "Calcular Ponto" para ver os resultados.</p>
                 </div>
                 
                 <div class="section">
@@ -69,6 +71,7 @@
                         <div id="headResult">Altura (m): -</div>
                         <div id="powerResult">Potência Resultante (CV): -</div>
                         <div id="efficiencyResult">Rendimento no Ponto (%): -</div>
+                        <div id="statusResult" class="status-message"></div>
                     </div>
                 </div>
             </div>

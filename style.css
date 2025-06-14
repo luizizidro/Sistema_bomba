@@ -92,36 +92,37 @@ h1 {
     border-color: #3498db;
 }
 
-.form-group button {
-    background: #3498db;
+.calculate-btn {
+    background: #27ae60;
     color: white;
     border: none;
-    padding: 8px 15px;
+    padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 14px;
-    margin-left: 10px;
+    font-weight: 500;
+    transition: background-color 0.3s;
+    margin-right: 10px;
+}
+
+.calculate-btn:hover {
+    background: #219a52;
+}
+
+.clear-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
     transition: background-color 0.3s;
 }
 
-.form-group button:hover {
-    background: #2980b9;
-}
-
-.form-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.form-group label {
-    min-width: 120px;
-    margin-bottom: 0;
-}
-
-.form-group input {
-    flex: 1;
-    margin: 0;
+.clear-btn:hover {
+    background: #c0392b;
 }
 
 .info-display {
@@ -170,9 +171,22 @@ h1 {
     line-height: 1.4;
 }
 
-.error {
-    color: #e74c3c;
+.status-message {
+    font-size: 13px;
     font-weight: 500;
+    padding: 8px 0;
+}
+
+.status-message.success {
+    color: #27ae60;
+}
+
+.status-message.warning {
+    color: #f39c12;
+}
+
+.status-message.error {
+    color: #e74c3c;
 }
 
 @media (max-width: 1200px) {
@@ -205,8 +219,9 @@ h1 {
         margin-bottom: 5px;
     }
     
-    .form-group button {
-        margin-left: 0;
-        margin-top: 5px;
+    .calculate-btn,
+    .clear-btn {
+        margin: 5px 0;
+        width: 100%;
     }
 }
