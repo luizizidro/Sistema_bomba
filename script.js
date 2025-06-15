@@ -91,19 +91,19 @@ const pumpData = {
             });
         },
         get potencia_data() {
-            // Curva de potência que vai até exatamente 46.5 CV
+            // Curva de potência CURVA (não reta) que vai até exatamente 46.5 CV
             return this.vazao_data.map(q => {
                 const p0 = 12; // Potência inicial
                 const pMax = 46.5; // Potência máxima
                 const qMax = 500; // Vazão máxima
                 
-                // Curva crescente até 46.5 CV
+                // Curva quadrática crescente até 46.5 CV
                 const normalizedQ = q / qMax;
-                return p0 + (pMax - p0) * (normalizedQ + 0.2 * normalizedQ * normalizedQ);
+                return p0 + (pMax - p0) * (0.3 * normalizedQ + 0.7 * normalizedQ * normalizedQ);
             });
         },
         get npsh_curva() {
-            // NPSH que tem pico de 25 mca
+            // NPSH CURVA (não reta) que tem pico de 25 mca
             return this.vazao_data.map(q => {
                 const npshMin = 15; // NPSH mínimo
                 const npshMax = 25; // NPSH máximo (pico)
@@ -111,13 +111,14 @@ const pumpData = {
                 const qMax = 500; // Vazão máxima
                 
                 if (q <= qPico) {
-                    // Crescimento até o pico
+                    // Crescimento curvo até o pico
                     const normalizedQ = q / qPico;
-                    return npshMin + (npshMax - npshMin) * normalizedQ;
+                    return npshMin + (npshMax - npshMin) * (0.5 * normalizedQ + 0.5 * normalizedQ * normalizedQ);
                 } else {
-                    // Decrescimento após o pico
+                    // Decrescimento curvo após o pico
                     const normalizedQ = (q - qPico) / (qMax - qPico);
-                    return npshMax - (npshMax - npshMin) * 0.3 * normalizedQ;
+                    const decrescimento = 0.4 * normalizedQ + 0.1 * normalizedQ * normalizedQ;
+                    return npshMax - (npshMax - npshMin) * 0.4 * decrescimento;
                 }
             });
         },
@@ -370,6 +371,7 @@ function calculateOperatingPoint() {
         // Verificar se os valores estão dentro da faixa da bomba (com tolerância para valores baixos)
         const maxFlow = Math.max(...data.vazao_data);
         const maxHead = Math.max(...data.altura_data);
+        const minHead = Math.min(...data.altura_data); // Para bombas que podem ter altura negativa
         
         let warningMessage = "";
         
@@ -380,10 +382,16 @@ function calculateOperatingPoint() {
             warningMessage += "Vazão acima da faixa recomendada. ";
         }
         
+        // Verificar altura considerando valores negativos possíveis
         if (headVal > maxHead * 1.2) {
             warningMessage += "Altura muito alta para esta bomba. ";
         } else if (headVal > maxHead) {
             warningMessage += "Altura acima da faixa recomendada. ";
+        }
+        
+        // Para bombas com altura negativa possível (como Bomba Trabalho)
+        if (minHead < 0 && headVal < minHead * 1.2) {
+            warningMessage += "Altura muito baixa para esta bomba. ";
         }
         
         // Avisos específicos para valores muito baixos
@@ -391,7 +399,7 @@ function calculateOperatingPoint() {
             warningMessage += "Vazão muito baixa - verifique se é adequada para a aplicação. ";
         }
         
-        if (headVal > 0 && headVal < maxHead * 0.05) {
+        if (headVal > 0 && headVal < Math.abs(maxHead) * 0.05) {
             warningMessage += "Altura muito baixa - verifique se é adequada para a aplicação. ";
         }
         
@@ -413,9 +421,9 @@ function calculateOperatingPoint() {
         }
         
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
-        if (flowVal > 0 && headVal > 0) {
+        if (flowVal > 0 && headVal !== 0) {
             const headDifference = Math.abs(headVal - headFromCurve);
-            const headTolerance = Math.max(headFromCurve * 0.2, 3); // 20% de tolerância ou mínimo 3m
+            const headTolerance = Math.max(Math.abs(headFromCurve) * 0.2, 5); // 20% de tolerância ou mínimo 5m
             
             if (headDifference > headTolerance) {
                 warningMessage += `Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m). `;
@@ -441,6 +449,7 @@ function calculateOperatingPoint() {
         updateOperatingPointDisplay(flowVal, headVal, powerFromCurve, effFromCurve, npshFromCurve, headFromCurve);
         
     } catch (error) {
+        console.error("Erro no cálculo:", error);
         showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
     }
 }
@@ -521,11 +530,14 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
     ];
     
     // Adicionar linha vertical para mostrar a vazão
+    const maxHeightForLine = Math.max(curveHead, userHead, 0) * 1.1;
+    const minHeightForLine = Math.min(curveHead, userHead, 0) * 1.1;
+    
     const verticalLine = {
         label: '',
         data: [
-            {x: flow, y: 0},
-            {x: flow, y: Math.max(curveHead, userHead) * 1.1}
+            {x: flow, y: minHeightForLine},
+            {x: flow, y: maxHeightForLine}
         ],
         borderColor: 'rgba(128, 128, 128, 0.5)',
         backgroundColor: 'transparent',
