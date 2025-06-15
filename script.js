@@ -76,25 +76,53 @@ const pumpData = {
         rotacao_rpm: 1700,
         npsh_mca: 25,
         rendimento_percent: 75,
-        vazao_data: linspace(0, 500, 100), // Atualizado para 500 m³/h
+        vazao_data: linspace(0, 500, 100),
         get altura_data() {
+            // Curva de altura que vai até -10m no final
             return this.vazao_data.map(q => {
-                const h0 = 200; // Altura de shutoff atualizada para 200m
-                const qMax = 520; // Vazão máxima teórica
-                return h0 * (1 - Math.pow(q / qMax, 1.6));
+                // Altura inicial de 200m, chegando a -10m em 500 m³/h
+                const h0 = 200; // Altura de shutoff
+                const hFinal = -10; // Altura final em vazão máxima
+                const qMax = 500; // Vazão máxima
+                
+                // Curva parabólica que vai de 200m a -10m
+                const normalizedQ = q / qMax;
+                return h0 + (hFinal - h0) * Math.pow(normalizedQ, 1.5);
             });
         },
         get potencia_data() {
+            // Curva de potência que vai até exatamente 46.5 CV
             return this.vazao_data.map(q => {
-                const p0 = 12;
-                return p0 + (q / 500) * 34.5 + 0.00015 * q * q; // Ajustado para nova faixa
+                const p0 = 12; // Potência inicial
+                const pMax = 46.5; // Potência máxima
+                const qMax = 500; // Vazão máxima
+                
+                // Curva crescente até 46.5 CV
+                const normalizedQ = q / qMax;
+                return p0 + (pMax - p0) * (normalizedQ + 0.2 * normalizedQ * normalizedQ);
             });
         },
         get npsh_curva() {
-            return this.vazao_data.map(q => 15 + (q / 500) * 20 + 0.0002 * q * q); // Ajustado para nova faixa
+            // NPSH que tem pico de 25 mca
+            return this.vazao_data.map(q => {
+                const npshMin = 15; // NPSH mínimo
+                const npshMax = 25; // NPSH máximo (pico)
+                const qPico = 300; // Vazão onde ocorre o pico
+                const qMax = 500; // Vazão máxima
+                
+                if (q <= qPico) {
+                    // Crescimento até o pico
+                    const normalizedQ = q / qPico;
+                    return npshMin + (npshMax - npshMin) * normalizedQ;
+                } else {
+                    // Decrescimento após o pico
+                    const normalizedQ = (q - qPico) / (qMax - qPico);
+                    return npshMax - (npshMax - npshMin) * 0.3 * normalizedQ;
+                }
+            });
         },
         get rendimento_curva() {
-            return generateEfficiencyCurve(this.vazao_data, 300, 75); // BEP ajustado para 300 m³/h
+            return generateEfficiencyCurve(this.vazao_data, 300, 75);
         }
     }
 };
@@ -174,9 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         color: 'red'
                     },
                     ticks: {
-                        color: 'red'
+                        color: 'red',
+                        stepSize: 20 // Força intervalos de 20 em 20
                     },
-                    min: 0
+                    grid: {
+                        display: true
+                    }
                 },
                 y1: {
                     type: 'linear',
