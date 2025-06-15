@@ -16,7 +16,8 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
     show: false,
-    titleBarStyle: 'default'
+    titleBarStyle: 'default',
+    autoHideMenuBar: false
   });
 
   // Carregar o app
@@ -31,10 +32,17 @@ function createWindow() {
   // Mostrar janela quando estiver pronta
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    mainWindow.focus();
   });
 
   // Criar menu personalizado
   createMenu();
+
+  // Prevenir navegação externa
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    require('electron').shell.openExternal(url);
+    return { action: 'deny' };
+  });
 }
 
 function createMenu() {
@@ -42,6 +50,14 @@ function createMenu() {
     {
       label: 'Arquivo',
       submenu: [
+        {
+          label: 'Recarregar',
+          accelerator: 'F5',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) focusedWindow.reload();
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Sair',
           accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
@@ -81,14 +97,15 @@ function createMenu() {
       label: 'Ajuda',
       submenu: [
         {
-          label: 'Sobre',
+          label: 'Sobre o Sistema',
           click: async () => {
             const { dialog } = require('electron');
             await dialog.showMessageBox({
               type: 'info',
-              title: 'Sobre',
+              title: 'Sobre o Sistema',
               message: 'Sistema de Seleção de Bombas',
-              detail: 'Versão 1.0.0\n\nSistema para análise e seleção de bombas centrífugas.\n\nDesenvolvido com Electron e Chart.js'
+              detail: 'Versão 1.0.0\n\nSistema para análise e seleção de bombas centrífugas.\n\nDesenvolvido com Electron e Chart.js\n\nPermite cálculo de pontos de operação e visualização de curvas características.',
+              buttons: ['OK']
             });
           }
         }
@@ -102,7 +119,17 @@ function createMenu() {
 
 // Este método será chamado quando o Electron tiver terminado
 // a inicialização e estiver pronto para criar janelas do navegador.
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    // No macOS, é comum recriar uma janela no app quando o
+    // ícone do dock é clicado e não há outras janelas abertas.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
 
 // Sair quando todas as janelas estiverem fechadas, exceto no macOS
 app.on('window-all-closed', () => {
@@ -111,10 +138,10 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
-  // No macOS, é comum recriar uma janela no app quando o
-  // ícone do dock é clicado e não há outras janelas abertas.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+// Configurações de segurança
+app.on('web-contents-created', (event, contents) => {
+  contents.on('new-window', (event, navigationUrl) => {
+    event.preventDefault();
+    require('electron').shell.openExternal(navigationUrl);
+  });
 });
