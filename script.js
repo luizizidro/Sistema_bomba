@@ -362,9 +362,16 @@ function calculateOperatingPoint() {
             return;
         }
         
-        // Permitir valores baixos e zero
-        if (flowVal < 0 || headVal < 0) {
-            showStatus("Erro: Valores não podem ser negativos.", "error");
+        // Verificar se a vazão é negativa (não permitido)
+        if (flowVal < 0) {
+            showStatus("Erro: Vazão não pode ser negativa.", "error");
+            return;
+        }
+        
+        // Para "Bomba Trabalho", permitir altura negativa
+        // Para outras bombas, não permitir altura negativa
+        if (selectedPump !== "Bomba Trabalho" && headVal < 0) {
+            showStatus("Erro: Altura não pode ser negativa para esta bomba.", "error");
             return;
         }
         
@@ -437,6 +444,11 @@ function calculateOperatingPoint() {
             warningMessage += "Condição de shutoff - válvula fechada. ";
         } else if (headVal === 0) {
             warningMessage += "Condição de descarga livre - sem pressão. ";
+        }
+        
+        // Aviso específico para altura negativa na Bomba Trabalho
+        if (selectedPump === "Bomba Trabalho" && headVal < 0) {
+            warningMessage += "Operação com altura negativa (sucção) - verifique as condições de instalação. ";
         }
         
         if (warningMessage) {
