@@ -15,7 +15,7 @@
     "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
     "build-only": "vite build",
-    "dist-win": "npm run build-only && electron-builder --win --publish=never"
+    "dist-win": "npm run build-only && electron-builder --win --publish=never --config.win.certificateFile=false --config.win.certificatePassword=false --config.win.sign=false --config.forceCodeSigning=false"
   },
   "devDependencies": {
     "vite": "^5.0.0",
@@ -48,15 +48,7 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "sign": false,
-      "verifyUpdateCodeSignature": false
-    },
-    "mac": {
-      "target": "dmg"
-    },
-    "linux": {
-      "target": "AppImage"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -67,7 +59,6 @@
     },
     "portable": {
       "artifactName": "Sistema-Selecao-Bombas-Portable.exe"
-    },
-    "forceCodeSigning": false
+    }
   }
 }
