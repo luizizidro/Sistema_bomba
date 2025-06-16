@@ -19,7 +19,9 @@
         "target": "portable",
         "arch": ["x64"]
       }
-    ]
+    ],
+    "sign": false,
+    "verifyUpdateCodeSignature": false
   },
   "nsis": {
     "oneClick": false,
@@ -30,5 +32,6 @@
   },
   "portable": {
     "artifactName": "Sistema-Selecao-Bombas-Portable.exe"
-  }
+  },
+  "forceCodeSigning": false
 }

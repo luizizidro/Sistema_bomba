@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 echo 🚀 Iniciando build para Windows...
 
 echo 📦 Fazendo build da aplicacao web...
@@ -13,7 +14,7 @@ if %errorlevel% neq 0 (
 echo ✅ Build da aplicacao web concluido
 
 echo 🔧 Gerando executavel do Electron...
-call npx electron-builder --win --publish=never --config.win.sign=null --config.forceCodeSigning=false
+call npx electron-builder --win --publish=never
 
 if %errorlevel% neq 0 (
     echo ❌ Erro na geracao do executavel
@@ -22,5 +23,9 @@ if %errorlevel% neq 0 (
 )
 
 echo ✅ Executavel gerado com sucesso!
-echo 📁 Verifique a pasta dist-electron/
+echo 📁 Arquivos criados em dist-electron/:
+echo    - Sistema de Seleção de Bombas Setup 1.0.0.exe (Instalador)
+echo    - Sistema-Selecao-Bombas-Portable.exe (Versão Portable)
+echo.
+echo 🎉 Pronto para usar!
 pause
