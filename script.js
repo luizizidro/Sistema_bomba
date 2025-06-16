@@ -147,15 +147,15 @@ function interp(x, xp, fp) {
 
 // Aguardar o carregamento completo da página
 function initializeSystem() {
-    console.log('Inicializando sistema...');
+    console.log('🚀 Inicializando sistema...');
     
     const ctx = document.getElementById('pumpChart');
     if (!ctx) {
-        console.error('Canvas não encontrado!');
+        console.error('❌ Canvas não encontrado!');
         return;
     }
     
-    console.log('Canvas encontrado, criando gráfico...');
+    console.log('✅ Canvas encontrado, criando gráfico...');
     
     chart = new Chart(ctx, {
         type: 'line',
@@ -272,57 +272,56 @@ function initializeSystem() {
         }
     });
     
-    console.log('Gráfico criado com sucesso!');
+    console.log('✅ Gráfico criado com sucesso!');
     
     // Event listeners
     const pumpSelect = document.getElementById('pumpSelect');
     if (pumpSelect) {
         pumpSelect.addEventListener('change', onPumpSelect);
-        console.log('Event listener adicionado ao select');
+        console.log('✅ Event listener adicionado ao select');
     }
     
     // Inicializar com a primeira bomba
     onPumpSelect();
-    console.log('Sistema inicializado completamente!');
+    console.log('🎉 Sistema inicializado completamente!');
 }
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM carregado, aguardando Chart.js...');
+// Inicialização robusta
+function startSystem() {
+    console.log('🔄 Tentando inicializar sistema...');
     
     // Verificar se Chart.js está carregado
     if (typeof Chart !== 'undefined') {
-        console.log('Chart.js já carregado');
+        console.log('✅ Chart.js disponível');
         initializeSystem();
     } else {
-        console.log('Aguardando Chart.js...');
-        // Aguardar um pouco para o Chart.js carregar
-        setTimeout(() => {
-            if (typeof Chart !== 'undefined') {
-                console.log('Chart.js carregado após timeout');
-                initializeSystem();
-            } else {
-                console.error('Chart.js não foi carregado!');
-                // Tentar carregar Chart.js dinamicamente
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
-                script.onload = () => {
-                    console.log('Chart.js carregado dinamicamente');
-                    initializeSystem();
-                };
-                document.head.appendChild(script);
-            }
-        }, 1000);
+        console.log('⏳ Chart.js não disponível, tentando novamente...');
+        setTimeout(startSystem, 500);
+    }
+}
+
+// Múltiplas tentativas de inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM carregado');
+    startSystem();
+});
+
+// Fallback adicional
+window.addEventListener('load', function() {
+    console.log('🌐 Window carregado');
+    if (!chart) {
+        console.log('🔄 Tentativa adicional de inicialização...');
+        startSystem();
     }
 });
 
 function onPumpSelect() {
-    console.log('Bomba selecionada');
+    console.log('🔧 Bomba selecionada');
     clearResults();
     const selectedPump = document.getElementById('pumpSelect').value;
     const data = pumpData[selectedPump];
     
-    console.log('Dados da bomba:', data);
+    console.log('📊 Dados da bomba:', selectedPump, data);
     
     // Atualizar informações da bomba
     const powerInfo = document.getElementById('powerInfo');
@@ -330,26 +329,37 @@ function onPumpSelect() {
     const npshInfo = document.getElementById('npshInfo');
     const efficiencyInfo = document.getElementById('efficiencyInfo');
     
-    if (powerInfo) powerInfo.textContent = `${data.potencia_cv} CV`;
-    if (rotationInfo) rotationInfo.textContent = `${data.rotacao_rpm} rpm`;
-    if (npshInfo) npshInfo.textContent = `${data.npsh_mca} mca`;
-    if (efficiencyInfo) efficiencyInfo.textContent = `${data.rendimento_percent}%`;
+    if (powerInfo) {
+        powerInfo.textContent = `${data.potencia_cv} CV`;
+        console.log('✅ Potência atualizada:', data.potencia_cv);
+    }
+    if (rotationInfo) {
+        rotationInfo.textContent = `${data.rotacao_rpm} rpm`;
+        console.log('✅ Rotação atualizada:', data.rotacao_rpm);
+    }
+    if (npshInfo) {
+        npshInfo.textContent = `${data.npsh_mca} mca`;
+        console.log('✅ NPSH atualizado:', data.npsh_mca);
+    }
+    if (efficiencyInfo) {
+        efficiencyInfo.textContent = `${data.rendimento_percent}%`;
+        console.log('✅ Rendimento atualizado:', data.rendimento_percent);
+    }
     
-    console.log('Informações da bomba atualizadas');
-    
+    console.log('📈 Plotando curvas...');
     plotCurves();
 }
 
 function plotCurves() {
     if (!chart) {
-        console.error('Gráfico não inicializado!');
+        console.error('❌ Gráfico não inicializado!');
         return;
     }
     
     const selectedPump = document.getElementById('pumpSelect').value;
     const data = pumpData[selectedPump];
     
-    console.log('Plotando curvas para:', selectedPump);
+    console.log('📊 Plotando curvas para:', selectedPump);
     
     const datasets = [
         {
@@ -400,11 +410,11 @@ function plotCurves() {
     
     chart.data.datasets = datasets;
     chart.update();
-    console.log('Curvas plotadas com sucesso!');
+    console.log('✅ Curvas plotadas com sucesso!');
 }
 
 function calculateOperatingPoint() {
-    console.log('Calculando ponto de operação...');
+    console.log('🧮 Calculando ponto de operação...');
     clearOperatingPoint();
     
     const flowInput = document.getElementById('flowInput').value;
@@ -421,7 +431,7 @@ function calculateOperatingPoint() {
         const selectedPump = document.getElementById('pumpSelect').value;
         const data = pumpData[selectedPump];
         
-        console.log('Valores:', { flowVal, headVal, selectedPump });
+        console.log('📊 Valores:', { flowVal, headVal, selectedPump });
         
         if (isNaN(flowVal) || isNaN(headVal)) {
             showStatus("Erro: Valores inválidos inseridos.", "error");
@@ -493,7 +503,7 @@ function calculateOperatingPoint() {
             headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
         }
         
-        console.log('Valores calculados:', { powerFromCurve, effFromCurve, npshFromCurve, headFromCurve });
+        console.log('📈 Valores calculados:', { powerFromCurve, effFromCurve, npshFromCurve, headFromCurve });
         
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
         if (flowVal > 0 && headVal !== 0) {
@@ -529,18 +539,18 @@ function calculateOperatingPoint() {
         updateOperatingPointDisplay(flowVal, headVal, powerFromCurve, effFromCurve, npshFromCurve, headFromCurve);
         
     } catch (error) {
-        console.error("Erro no cálculo:", error);
+        console.error("❌ Erro no cálculo:", error);
         showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
     }
 }
 
 function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequired, curveHead) {
     if (!chart) {
-        console.error('Gráfico não disponível para atualizar pontos');
+        console.error('❌ Gráfico não disponível para atualizar pontos');
         return;
     }
     
-    console.log('Atualizando display do ponto de operação');
+    console.log('🎯 Atualizando display do ponto de operação');
     clearOperatingPoint();
     
     // Adicionar pontos de operação ao gráfico
@@ -650,7 +660,7 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
     if (efficiencyResult) efficiencyResult.textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
     
     chart.update();
-    console.log('Pontos de operação atualizados no gráfico');
+    console.log('✅ Pontos de operação atualizados no gráfico');
 }
 
 function clearOperatingPoint() {
@@ -695,5 +705,5 @@ function showStatus(message, type) {
         statusElement.textContent = message;
         statusElement.className = `status-message ${type}`;
     }
-    console.log(`Status: ${type} - ${message}`);
+    console.log(`📢 Status: ${type} - ${message}`);
 }

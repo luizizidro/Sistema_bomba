@@ -85,7 +85,7 @@
         </div>
     </div>
     
-    <!-- Carregar Chart.js primeiro -->
+    <!-- Carregar Chart.js primeiro com versão específica -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <!-- Depois carregar nosso script -->
     <script src="script.js"></script>
@@ -102,6 +102,15 @@
                     });
             });
         }
+        
+        // Debug adicional
+        console.log('🔍 Verificando elementos DOM...');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Canvas:', document.getElementById('pumpChart'));
+            console.log('✅ Select:', document.getElementById('pumpSelect'));
+            console.log('✅ PowerInfo:', document.getElementById('powerInfo'));
+            console.log('✅ Chart.js:', typeof Chart);
+        });
     </script>
 </body>
 </html>
