@@ -118,7 +118,7 @@ const pumpData = {
                     // Decrescimento curvo após o pico
                     const normalizedQ = (q - qPico) / (qMax - qPico);
                     const decrescimento = 0.4 * normalizedQ + 0.1 * normalizedQ * normalizedQ;
-                    return npshMax - (npshMax - npshMin) * 0.4 * decrescimento;
+                    return npshMax - (npshMin - npshMin) * 0.4 * decrescimento;
                 }
             });
         },
@@ -159,6 +159,13 @@ function initializeSystem() {
     console.log('✅ Canvas encontrado, criando gráfico...');
     
     try {
+        // Destruir chart existente se houver
+        if (chart) {
+            console.log('🗑️ Destruindo chart existente...');
+            chart.destroy();
+            chart = null;
+        }
+        
         chart = new Chart(ctx, {
             type: 'line',
             data: {
