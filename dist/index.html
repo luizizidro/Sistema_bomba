@@ -85,11 +85,69 @@
         </div>
     </div>
     
-    <!-- Carregar Chart.js primeiro com versão específica -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <!-- Depois carregar nosso script -->
-    <script src="script.js"></script>
+    <!-- Carregar Chart.js com fallback -->
     <script>
+        // Função para carregar Chart.js com fallback
+        function loadChartJS() {
+            console.log('📦 Carregando Chart.js...');
+            
+            // Tentar carregar da CDN principal
+            const script1 = document.createElement('script');
+            script1.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+            script1.onload = function() {
+                console.log('✅ Chart.js carregado da CDN principal');
+                loadMainScript();
+            };
+            script1.onerror = function() {
+                console.log('⚠️ CDN principal falhou, tentando CDN alternativa...');
+                
+                // Fallback para CDN alternativa
+                const script2 = document.createElement('script');
+                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js';
+                script2.onload = function() {
+                    console.log('✅ Chart.js carregado da CDN alternativa');
+                    loadMainScript();
+                };
+                script2.onerror = function() {
+                    console.error('❌ Falha ao carregar Chart.js de todas as CDNs');
+                    showErrorMessage();
+                };
+                document.head.appendChild(script2);
+            };
+            document.head.appendChild(script1);
+        }
+        
+        // Função para carregar o script principal
+        function loadMainScript() {
+            const script = document.createElement('script');
+            script.src = 'script.js';
+            script.onload = function() {
+                console.log('✅ Script principal carregado');
+            };
+            script.onerror = function() {
+                console.error('❌ Erro ao carregar script principal');
+                showErrorMessage();
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Função para mostrar mensagem de erro
+        function showErrorMessage() {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 10px; margin: 20px;">
+                        <h2 style="color: #e74c3c; margin-bottom: 20px;">❌ Erro de Carregamento</h2>
+                        <p style="margin-bottom: 20px;">Não foi possível carregar os recursos necessários.</p>
+                        <p style="margin-bottom: 20px;">Verifique sua conexão com a internet e tente novamente.</p>
+                        <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                            🔄 Recarregar Página
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
         // Registrar Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -103,14 +161,8 @@
             });
         }
         
-        // Debug adicional
-        console.log('🔍 Verificando elementos DOM...');
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ Canvas:', document.getElementById('pumpChart'));
-            console.log('✅ Select:', document.getElementById('pumpSelect'));
-            console.log('✅ PowerInfo:', document.getElementById('powerInfo'));
-            console.log('✅ Chart.js:', typeof Chart);
-        });
+        // Iniciar carregamento
+        loadChartJS();
     </script>
 </body>
 </html>
