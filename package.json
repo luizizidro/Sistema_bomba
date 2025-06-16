@@ -14,7 +14,9 @@
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
-    "dist-win": "npm run build && electron-builder --win --publish=never --config.win.sign=null --config.forceCodeSigning=false"
+    "dist-win": "npm run build && electron-builder --win --publish=never --config.win.sign=null --config.forceCodeSigning=false",
+    "build-only": "vite build",
+    "electron-build": "electron-builder --win --publish=never --config.win.sign=null --config.forceCodeSigning=false"
   },
   "devDependencies": {
     "vite": "^5.0.0",
