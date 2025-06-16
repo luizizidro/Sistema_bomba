@@ -133,8 +133,6 @@ const pumpData = {
 let chart;
 let operatingPointDatasets = [];
 let isChartInitialized = false;
-let initializationAttempts = 0;
-const MAX_INIT_ATTEMPTS = 15;
 
 // Função de interpolação linear
 function interp(x, xp, fp) {
@@ -150,51 +148,30 @@ function interp(x, xp, fp) {
     return fp[fp.length - 1];
 }
 
-// Função para verificar se Chart.js está disponível
-function isChartJSAvailable() {
-    return typeof Chart !== 'undefined' && Chart.Chart;
-}
-
-// Função para aguardar Chart.js carregar com timeout mais longo
-function waitForChartJS(callback, attempt = 0) {
-    if (attempt >= MAX_INIT_ATTEMPTS) {
-        console.error('❌ Chart.js não carregou após múltiplas tentativas');
-        showStatus("Erro: Biblioteca de gráficos não carregou. Verifique sua conexão.", "error");
-        return;
-    }
-    
-    if (isChartJSAvailable()) {
-        console.log('✅ Chart.js disponível, executando callback');
-        callback();
-    } else {
-        console.log(`⏳ Aguardando Chart.js... tentativa ${attempt + 1}/${MAX_INIT_ATTEMPTS}`);
-        setTimeout(() => waitForChartJS(callback, attempt + 1), 1000); // Aumentado para 1 segundo
-    }
-}
-
-// Função principal de inicialização
+// Função principal de inicialização do sistema
 function initializeSystem() {
-    console.log('🚀 Inicializando sistema...');
+    console.log('🚀 Inicializando sistema de bombas...');
     
     if (isChartInitialized) {
         console.log('⚠️ Sistema já inicializado');
-        return;
+        return true;
+    }
+    
+    // Verificar se Chart.js está disponível
+    if (typeof Chart === 'undefined' || !Chart.Chart) {
+        console.error('❌ Chart.js não está disponível');
+        showStatus("Erro: Biblioteca de gráficos não carregada.", "error");
+        return false;
     }
     
     const ctx = document.getElementById('pumpChart');
     if (!ctx) {
         console.error('❌ Canvas não encontrado!');
-        setTimeout(initializeSystem, 1000); // Tentar novamente
-        return;
+        showStatus("Erro: Elemento de gráfico não encontrado.", "error");
+        return false;
     }
     
-    console.log('✅ Canvas encontrado, verificando Chart.js...');
-    
-    if (!isChartJSAvailable()) {
-        console.error('❌ Chart.js não está disponível');
-        setTimeout(initializeSystem, 1000); // Tentar novamente
-        return;
-    }
+    console.log('✅ Canvas encontrado, criando gráfico...');
     
     try {
         // Destruir chart existente se houver
@@ -204,10 +181,7 @@ function initializeSystem() {
             chart = null;
         }
         
-        // Configuração do Chart.js com configurações mais robustas
-        Chart.defaults.responsive = true;
-        Chart.defaults.maintainAspectRatio = false;
-        
+        // Configuração robusta do Chart.js
         chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -265,8 +239,7 @@ function initializeSystem() {
                             color: 'red'
                         },
                         ticks: {
-                            color: 'red',
-                            stepSize: 20 // Força intervalos de 20 em 20
+                            color: 'red'
                         },
                         grid: {
                             display: true
@@ -338,11 +311,13 @@ function initializeSystem() {
             console.log('🎉 Sistema inicializado completamente!');
         }, 100);
         
+        return true;
+        
     } catch (error) {
         console.error('❌ Erro ao criar gráfico:', error);
+        showStatus("Erro: Falha na criação do gráfico.", "error");
         isChartInitialized = false;
-        // Tentar novamente após um delay
-        setTimeout(initializeSystem, 2000);
+        return false;
     }
 }
 
@@ -357,60 +332,6 @@ function setupEventListeners() {
         console.log('✅ Event listener configurado');
     }
 }
-
-// Função de inicialização robusta
-function startSystem() {
-    initializationAttempts++;
-    console.log(`🔄 Tentativa de inicialização ${initializationAttempts}/${MAX_INIT_ATTEMPTS}`);
-    
-    if (initializationAttempts > MAX_INIT_ATTEMPTS) {
-        console.error('❌ Máximo de tentativas de inicialização atingido');
-        showStatus("Erro: Falha na inicialização. Recarregue a página.", "error");
-        return;
-    }
-    
-    // Verificar se todos os elementos DOM estão disponíveis
-    const requiredElements = [
-        'pumpChart', 'pumpSelect', 'powerInfo', 'rotationInfo', 
-        'npshInfo', 'efficiencyInfo', 'flowInput', 'headInput'
-    ];
-    
-    const missingElements = requiredElements.filter(id => !document.getElementById(id));
-    
-    if (missingElements.length > 0) {
-        console.log('⏳ Elementos DOM ainda não disponíveis:', missingElements);
-        setTimeout(startSystem, 500);
-        return;
-    }
-    
-    // Aguardar Chart.js e inicializar
-    waitForChartJS(() => {
-        if (!isChartInitialized) {
-            initializeSystem();
-        }
-    });
-}
-
-// Event listeners para inicialização com delays maiores
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 DOM carregado');
-    setTimeout(startSystem, 500); // Aumentado delay
-});
-
-window.addEventListener('load', function() {
-    console.log('🌐 Window carregado');
-    if (!isChartInitialized) {
-        setTimeout(startSystem, 1000); // Aumentado delay
-    }
-});
-
-// Fallback adicional para garantir inicialização
-setTimeout(() => {
-    if (!isChartInitialized) {
-        console.log('🔄 Fallback de inicialização...');
-        startSystem();
-    }
-}, 5000); // Aumentado para 5 segundos
 
 function onPumpSelect() {
     console.log('🔧 Bomba selecionada');
@@ -436,7 +357,7 @@ function onPumpSelect() {
         return;
     }
     
-    console.log('📊 Dados da bomba:', selectedPump, data);
+    console.log('📊 Dados da bomba:', selectedPump);
     
     // Atualizar informações da bomba
     updatePumpInfo(data);
@@ -902,3 +823,4 @@ function showStatus(message, type) {
 // Expor funções globalmente para uso nos botões HTML
 window.calculateOperatingPoint = calculateOperatingPoint;
 window.clearAll = clearAll;
+window.initializeSystem = initializeSystem;

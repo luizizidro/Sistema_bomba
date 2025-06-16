@@ -98,9 +98,51 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .error-container {
+            text-align: center; 
+            padding: 50px; 
+            background: #f8f9fa; 
+            border-radius: 10px; 
+            margin: 20px; 
+            border: 2px solid #e74c3c;
+        }
+        .offline-container {
+            text-align: center; 
+            padding: 50px; 
+            background: #fff3cd; 
+            border-radius: 10px; 
+            margin: 20px; 
+            border: 2px solid #ffc107;
+        }
+        .btn {
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
     </style>
     
     <script>
+        // Configuração global
+        window.CHART_LOAD_TIMEOUT = 15000; // 15 segundos
+        window.MAX_RETRY_ATTEMPTS = 3;
+        window.currentRetryAttempt = 0;
+        
         // Mostrar indicador de carregamento
         function showLoading() {
             const loading = document.getElementById('loadingIndicator');
@@ -121,7 +163,9 @@
             const cdnUrls = [
                 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
                 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js',
-                'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js'
+                'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js',
+                'https://cdn.skypack.dev/chart.js@4.4.0',
+                'https://esm.sh/chart.js@4.4.0'
             ];
             
             let currentCdnIndex = 0;
@@ -130,29 +174,54 @@
                 if (index >= cdnUrls.length) {
                     console.error('❌ Falha ao carregar Chart.js de todas as CDNs');
                     hideLoading();
-                    showErrorMessage();
+                    handleLoadFailure();
                     return;
                 }
                 
+                console.log(`🔄 Tentando CDN ${index + 1}/${cdnUrls.length}: ${cdnUrls[index]}`);
+                
                 const script = document.createElement('script');
                 script.src = cdnUrls[index];
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                
+                let timeoutId;
+                let loaded = false;
+                
                 script.onload = function() {
-                    console.log(`✅ Chart.js carregado da CDN ${index + 1}`);
-                    hideLoading();
-                    loadMainScript();
+                    if (loaded) return;
+                    loaded = true;
+                    clearTimeout(timeoutId);
+                    
+                    // Verificar se Chart.js foi realmente carregado
+                    setTimeout(() => {
+                        if (typeof Chart !== 'undefined' && Chart.Chart) {
+                            console.log(`✅ Chart.js carregado com sucesso da CDN ${index + 1}`);
+                            hideLoading();
+                            loadMainScript();
+                        } else {
+                            console.log(`⚠️ Chart.js carregado mas não disponível da CDN ${index + 1}`);
+                            tryLoadFromCdn(index + 1);
+                        }
+                    }, 100);
                 };
+                
                 script.onerror = function() {
+                    if (loaded) return;
+                    loaded = true;
+                    clearTimeout(timeoutId);
                     console.log(`⚠️ CDN ${index + 1} falhou, tentando próxima...`);
                     tryLoadFromCdn(index + 1);
                 };
                 
                 // Timeout para CDNs lentas
-                setTimeout(() => {
-                    if (!window.Chart) {
-                        console.log(`⏰ Timeout na CDN ${index + 1}, tentando próxima...`);
-                        script.onerror();
-                    }
-                }, 10000); // 10 segundos de timeout
+                timeoutId = setTimeout(() => {
+                    if (loaded) return;
+                    loaded = true;
+                    console.log(`⏰ Timeout na CDN ${index + 1}, tentando próxima...`);
+                    script.remove();
+                    tryLoadFromCdn(index + 1);
+                }, window.CHART_LOAD_TIMEOUT);
                 
                 document.head.appendChild(script);
             }
@@ -164,14 +233,39 @@
         function loadMainScript() {
             const script = document.createElement('script');
             script.src = 'script.js';
+            script.async = true;
+            
             script.onload = function() {
                 console.log('✅ Script principal carregado');
+                // Aguardar um pouco para garantir que tudo foi inicializado
+                setTimeout(() => {
+                    if (typeof window.initializeSystem === 'function') {
+                        window.initializeSystem();
+                    }
+                }, 500);
             };
+            
             script.onerror = function() {
                 console.error('❌ Erro ao carregar script principal');
-                showErrorMessage();
+                handleLoadFailure();
             };
+            
             document.head.appendChild(script);
+        }
+        
+        // Função para lidar com falhas de carregamento
+        function handleLoadFailure() {
+            window.currentRetryAttempt++;
+            
+            if (window.currentRetryAttempt < window.MAX_RETRY_ATTEMPTS) {
+                console.log(`🔄 Tentativa ${window.currentRetryAttempt + 1}/${window.MAX_RETRY_ATTEMPTS} em 3 segundos...`);
+                setTimeout(() => {
+                    loadChartJS();
+                }, 3000);
+                return;
+            }
+            
+            showErrorMessage();
         }
         
         // Função para mostrar mensagem de erro
@@ -179,7 +273,7 @@
             const container = document.querySelector('.container');
             if (container) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 10px; margin: 20px; border: 2px solid #e74c3c;">
+                    <div class="error-container">
                         <h2 style="color: #e74c3c; margin-bottom: 20px;">❌ Erro de Carregamento</h2>
                         <p style="margin-bottom: 20px; font-size: 16px;">Não foi possível carregar os recursos necessários.</p>
                         <p style="margin-bottom: 20px; color: #666;">Possíveis causas:</p>
@@ -189,10 +283,10 @@
                             <li>Firewall ou proxy corporativo</li>
                         </ul>
                         <div style="margin: 20px 0;">
-                            <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px;">
+                            <button onclick="location.reload()" class="btn">
                                 🔄 Recarregar Página
                             </button>
-                            <button onclick="tryOfflineMode()" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px;">
+                            <button onclick="tryOfflineMode()" class="btn btn-success">
                                 📱 Modo Offline
                             </button>
                         </div>
@@ -209,7 +303,7 @@
             const container = document.querySelector('.container');
             if (container) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 50px; background: #fff3cd; border-radius: 10px; margin: 20px; border: 2px solid #ffc107;">
+                    <div class="offline-container">
                         <h2 style="color: #856404; margin-bottom: 20px;">📱 Modo Offline</h2>
                         <p style="margin-bottom: 20px;">O sistema está funcionando em modo limitado.</p>
                         <p style="margin-bottom: 20px; color: #666;">Recursos disponíveis:</p>
@@ -219,13 +313,68 @@
                             <li>Validações básicas</li>
                         </ul>
                         <p style="color: #856404; font-weight: bold;">Os gráficos não estarão disponíveis neste modo.</p>
-                        <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 10px; font-size: 14px;">
+                        <button onclick="location.reload()" class="btn">
                             🔄 Tentar Novamente
                         </button>
                     </div>
                 `;
             }
         }
+        
+        // Verificar conectividade
+        function checkConnectivity() {
+            return navigator.onLine;
+        }
+        
+        // Função principal de inicialização
+        function initializeApp() {
+            console.log('🚀 Inicializando aplicação...');
+            
+            if (!checkConnectivity()) {
+                console.log('⚠️ Aplicação offline detectada');
+                showErrorMessage();
+                return;
+            }
+            
+            // Verificar se Chart.js já está carregado (cache do navegador)
+            if (typeof Chart !== 'undefined' && Chart.Chart) {
+                console.log('✅ Chart.js já disponível no cache');
+                hideLoading();
+                loadMainScript();
+                return;
+            }
+            
+            // Carregar Chart.js
+            loadChartJS();
+        }
+        
+        // Event listeners para inicialização
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            // DOM já carregado
+            setTimeout(initializeApp, 100);
+        }
+        
+        // Fallback adicional
+        window.addEventListener('load', () => {
+            if (!window.Chart && window.currentRetryAttempt === 0) {
+                console.log('🔄 Fallback de inicialização...');
+                setTimeout(initializeApp, 1000);
+            }
+        });
+        
+        // Monitorar mudanças de conectividade
+        window.addEventListener('online', () => {
+            console.log('🌐 Conectividade restaurada');
+            if (!window.Chart) {
+                location.reload();
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('📴 Conectividade perdida');
+        });
         
         // Registrar Service Worker para PWA
         if ('serviceWorker' in navigator) {
@@ -240,30 +389,15 @@
             });
         }
         
-        // Verificar conectividade
-        function checkConnectivity() {
-            if (!navigator.onLine) {
-                console.log('⚠️ Aplicação offline detectada');
-                showErrorMessage();
-                return false;
-            }
-            return true;
-        }
-        
-        // Iniciar carregamento apenas se houver conectividade
-        if (checkConnectivity()) {
-            loadChartJS();
-        }
-        
-        // Monitorar mudanças de conectividade
-        window.addEventListener('online', () => {
-            console.log('🌐 Conectividade restaurada');
-            location.reload();
-        });
-        
-        window.addEventListener('offline', () => {
-            console.log('📴 Conectividade perdida');
-        });
+        // Função global para debug
+        window.debugInfo = function() {
+            console.log('🔍 Debug Info:', {
+                chartLoaded: typeof Chart !== 'undefined',
+                onLine: navigator.onLine,
+                retryAttempt: window.currentRetryAttempt,
+                userAgent: navigator.userAgent
+            });
+        };
     </script>
 </body>
 </html>
