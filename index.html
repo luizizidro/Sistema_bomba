@@ -85,36 +85,79 @@
         </div>
     </div>
     
-    <!-- Carregar Chart.js com fallback -->
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; display: none;">
+        <div style="text-align: center;">
+            <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+            <p>Carregando recursos...</p>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
     <script>
-        // Função para carregar Chart.js com fallback
+        // Mostrar indicador de carregamento
+        function showLoading() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.style.display = 'block';
+        }
+        
+        // Esconder indicador de carregamento
+        function hideLoading() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.style.display = 'none';
+        }
+        
+        // Função para carregar Chart.js com múltiplos fallbacks
         function loadChartJS() {
             console.log('📦 Carregando Chart.js...');
+            showLoading();
             
-            // Tentar carregar da CDN principal
-            const script1 = document.createElement('script');
-            script1.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
-            script1.onload = function() {
-                console.log('✅ Chart.js carregado da CDN principal');
-                loadMainScript();
-            };
-            script1.onerror = function() {
-                console.log('⚠️ CDN principal falhou, tentando CDN alternativa...');
+            const cdnUrls = [
+                'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js',
+                'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js'
+            ];
+            
+            let currentCdnIndex = 0;
+            
+            function tryLoadFromCdn(index) {
+                if (index >= cdnUrls.length) {
+                    console.error('❌ Falha ao carregar Chart.js de todas as CDNs');
+                    hideLoading();
+                    showErrorMessage();
+                    return;
+                }
                 
-                // Fallback para CDN alternativa
-                const script2 = document.createElement('script');
-                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js';
-                script2.onload = function() {
-                    console.log('✅ Chart.js carregado da CDN alternativa');
+                const script = document.createElement('script');
+                script.src = cdnUrls[index];
+                script.onload = function() {
+                    console.log(`✅ Chart.js carregado da CDN ${index + 1}`);
+                    hideLoading();
                     loadMainScript();
                 };
-                script2.onerror = function() {
-                    console.error('❌ Falha ao carregar Chart.js de todas as CDNs');
-                    showErrorMessage();
+                script.onerror = function() {
+                    console.log(`⚠️ CDN ${index + 1} falhou, tentando próxima...`);
+                    tryLoadFromCdn(index + 1);
                 };
-                document.head.appendChild(script2);
-            };
-            document.head.appendChild(script1);
+                
+                // Timeout para CDNs lentas
+                setTimeout(() => {
+                    if (!window.Chart) {
+                        console.log(`⏰ Timeout na CDN ${index + 1}, tentando próxima...`);
+                        script.onerror();
+                    }
+                }, 10000); // 10 segundos de timeout
+                
+                document.head.appendChild(script);
+            }
+            
+            tryLoadFromCdn(0);
         }
         
         // Função para carregar o script principal
@@ -136,12 +179,48 @@
             const container = document.querySelector('.container');
             if (container) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 10px; margin: 20px;">
+                    <div style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 10px; margin: 20px; border: 2px solid #e74c3c;">
                         <h2 style="color: #e74c3c; margin-bottom: 20px;">❌ Erro de Carregamento</h2>
-                        <p style="margin-bottom: 20px;">Não foi possível carregar os recursos necessários.</p>
-                        <p style="margin-bottom: 20px;">Verifique sua conexão com a internet e tente novamente.</p>
-                        <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                            🔄 Recarregar Página
+                        <p style="margin-bottom: 20px; font-size: 16px;">Não foi possível carregar os recursos necessários.</p>
+                        <p style="margin-bottom: 20px; color: #666;">Possíveis causas:</p>
+                        <ul style="text-align: left; max-width: 400px; margin: 0 auto 20px; color: #666;">
+                            <li>Conexão com a internet instável</li>
+                            <li>Bloqueio de recursos externos</li>
+                            <li>Firewall ou proxy corporativo</li>
+                        </ul>
+                        <div style="margin: 20px 0;">
+                            <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px;">
+                                🔄 Recarregar Página
+                            </button>
+                            <button onclick="tryOfflineMode()" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px;">
+                                📱 Modo Offline
+                            </button>
+                        </div>
+                        <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                            Se o problema persistir, entre em contato com o suporte técnico.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Modo offline básico (sem gráficos)
+        function tryOfflineMode() {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; background: #fff3cd; border-radius: 10px; margin: 20px; border: 2px solid #ffc107;">
+                        <h2 style="color: #856404; margin-bottom: 20px;">📱 Modo Offline</h2>
+                        <p style="margin-bottom: 20px;">O sistema está funcionando em modo limitado.</p>
+                        <p style="margin-bottom: 20px; color: #666;">Recursos disponíveis:</p>
+                        <ul style="text-align: left; max-width: 400px; margin: 0 auto 20px; color: #666;">
+                            <li>Dados técnicos das bombas</li>
+                            <li>Cálculos de interpolação</li>
+                            <li>Validações básicas</li>
+                        </ul>
+                        <p style="color: #856404; font-weight: bold;">Os gráficos não estarão disponíveis neste modo.</p>
+                        <button onclick="location.reload()" style="background: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; margin: 10px; font-size: 14px;">
+                            🔄 Tentar Novamente
                         </button>
                     </div>
                 `;
@@ -161,8 +240,30 @@
             });
         }
         
-        // Iniciar carregamento
-        loadChartJS();
+        // Verificar conectividade
+        function checkConnectivity() {
+            if (!navigator.onLine) {
+                console.log('⚠️ Aplicação offline detectada');
+                showErrorMessage();
+                return false;
+            }
+            return true;
+        }
+        
+        // Iniciar carregamento apenas se houver conectividade
+        if (checkConnectivity()) {
+            loadChartJS();
+        }
+        
+        // Monitorar mudanças de conectividade
+        window.addEventListener('online', () => {
+            console.log('🌐 Conectividade restaurada');
+            location.reload();
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('📴 Conectividade perdida');
+        });
     </script>
 </body>
 </html>

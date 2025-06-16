@@ -134,7 +134,7 @@ let chart;
 let operatingPointDatasets = [];
 let isChartInitialized = false;
 let initializationAttempts = 0;
-const MAX_INIT_ATTEMPTS = 10;
+const MAX_INIT_ATTEMPTS = 15;
 
 // Função de interpolação linear
 function interp(x, xp, fp) {
@@ -155,11 +155,11 @@ function isChartJSAvailable() {
     return typeof Chart !== 'undefined' && Chart.Chart;
 }
 
-// Função para aguardar Chart.js carregar
+// Função para aguardar Chart.js carregar com timeout mais longo
 function waitForChartJS(callback, attempt = 0) {
     if (attempt >= MAX_INIT_ATTEMPTS) {
         console.error('❌ Chart.js não carregou após múltiplas tentativas');
-        showStatus("Erro: Biblioteca de gráficos não carregou. Recarregue a página.", "error");
+        showStatus("Erro: Biblioteca de gráficos não carregou. Verifique sua conexão.", "error");
         return;
     }
     
@@ -168,7 +168,7 @@ function waitForChartJS(callback, attempt = 0) {
         callback();
     } else {
         console.log(`⏳ Aguardando Chart.js... tentativa ${attempt + 1}/${MAX_INIT_ATTEMPTS}`);
-        setTimeout(() => waitForChartJS(callback, attempt + 1), 500);
+        setTimeout(() => waitForChartJS(callback, attempt + 1), 1000); // Aumentado para 1 segundo
     }
 }
 
@@ -184,6 +184,7 @@ function initializeSystem() {
     const ctx = document.getElementById('pumpChart');
     if (!ctx) {
         console.error('❌ Canvas não encontrado!');
+        setTimeout(initializeSystem, 1000); // Tentar novamente
         return;
     }
     
@@ -191,6 +192,7 @@ function initializeSystem() {
     
     if (!isChartJSAvailable()) {
         console.error('❌ Chart.js não está disponível');
+        setTimeout(initializeSystem, 1000); // Tentar novamente
         return;
     }
     
@@ -202,7 +204,7 @@ function initializeSystem() {
             chart = null;
         }
         
-        // Configuração do Chart.js
+        // Configuração do Chart.js com configurações mais robustas
         Chart.defaults.responsive = true;
         Chart.defaults.maintainAspectRatio = false;
         
@@ -214,6 +216,9 @@ function initializeSystem() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 0 // Desabilitar animações para melhor performance
+                },
                 interaction: {
                     intersect: false,
                     mode: 'index'
@@ -328,12 +333,16 @@ function initializeSystem() {
         setupEventListeners();
         
         // Inicializar com a primeira bomba
-        onPumpSelect();
-        console.log('🎉 Sistema inicializado completamente!');
+        setTimeout(() => {
+            onPumpSelect();
+            console.log('🎉 Sistema inicializado completamente!');
+        }, 100);
         
     } catch (error) {
         console.error('❌ Erro ao criar gráfico:', error);
         isChartInitialized = false;
+        // Tentar novamente após um delay
+        setTimeout(initializeSystem, 2000);
     }
 }
 
@@ -370,7 +379,7 @@ function startSystem() {
     
     if (missingElements.length > 0) {
         console.log('⏳ Elementos DOM ainda não disponíveis:', missingElements);
-        setTimeout(startSystem, 200);
+        setTimeout(startSystem, 500);
         return;
     }
     
@@ -382,16 +391,16 @@ function startSystem() {
     });
 }
 
-// Event listeners para inicialização
+// Event listeners para inicialização com delays maiores
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📄 DOM carregado');
-    setTimeout(startSystem, 100);
+    setTimeout(startSystem, 500); // Aumentado delay
 });
 
 window.addEventListener('load', function() {
     console.log('🌐 Window carregado');
     if (!isChartInitialized) {
-        setTimeout(startSystem, 200);
+        setTimeout(startSystem, 1000); // Aumentado delay
     }
 });
 
@@ -401,14 +410,14 @@ setTimeout(() => {
         console.log('🔄 Fallback de inicialização...');
         startSystem();
     }
-}, 2000);
+}, 5000); // Aumentado para 5 segundos
 
 function onPumpSelect() {
     console.log('🔧 Bomba selecionada');
     
     if (!isChartInitialized) {
         console.log('⏳ Aguardando inicialização do gráfico...');
-        setTimeout(onPumpSelect, 500);
+        setTimeout(onPumpSelect, 1000);
         return;
     }
     
@@ -536,7 +545,7 @@ function plotCurves() {
         ];
         
         chart.data.datasets = datasets;
-        chart.update();
+        chart.update('none'); // Update sem animação
         console.log('✅ Curvas plotadas com sucesso!');
         
     } catch (error) {
@@ -801,7 +810,7 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
         // Atualizar resultados com valores das curvas da bomba
         updateResultsDisplay(flow, userHead, curveHead, power, efficiency);
         
-        chart.update();
+        chart.update('none'); // Update sem animação
         console.log('✅ Pontos de operação atualizados no gráfico');
         
     } catch (error) {
@@ -840,7 +849,7 @@ function clearOperatingPoint() {
         try {
             chart.data.datasets = chart.data.datasets.slice(0, 4);
             operatingPointDatasets = [];
-            chart.update();
+            chart.update('none'); // Update sem animação
         } catch (error) {
             console.error('❌ Erro ao limpar pontos de operação:', error);
         }
