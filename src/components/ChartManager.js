@@ -36,6 +36,13 @@ export class ChartManager {
         try {
             perfMonitor.start('chart-init');
             
+            // Verifica se já existe um chart no canvas e o destrói
+            const existingChart = Chart.getChart(canvasElement);
+            if (existingChart) {
+                existingChart.destroy();
+                console.log('🗑️ Chart existente destruído');
+            }
+            
             // Configuração otimizada do Chart.js
             this.chart = new Chart(canvasElement, {
                 type: 'line',
