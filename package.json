@@ -1,58 +1,41 @@
 {
   "name": "pump-selector-system",
   "private": true,
-  "version": "2.0.0",
-  "description": "Sistema otimizado para análise e seleção de bombas centrífugas",
+  "version": "1.0.0",
+  "description": "Sistema para análise e seleção de bombas centrífugas",
   "author": "Sistema de Bombas <contato@sistemabombas.com>",
   "main": "main.js",
-  "homepage": "https://github.com/pump-system/pump-selector",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron .",
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
-    "dist-win": "npm run build && electron-builder --win --publish=never",
-    "dist-mac": "npm run build && electron-builder --mac --publish=never",
-    "dist-linux": "npm run build && electron-builder --linux --publish=never",
     "build-only": "vite build",
-    "clean": "rimraf dist dist-electron node_modules/.cache",
-    "postinstall": "electron-builder install-app-deps",
-    "test": "echo \"Tests will be implemented\" && exit 0"
+    "dist-win": "npm run build-only && electron-builder --win --publish=never --config.win.certificateFile=false --config.win.certificatePassword=false --config.win.sign=false --config.forceCodeSigning=false"
   },
   "devDependencies": {
-    "vite": "^5.0.8",
-    "electron": "^28.1.0",
-    "electron-builder": "^24.9.1",
+    "vite": "^5.0.0",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
     "concurrently": "^8.2.2",
-    "wait-on": "^7.2.0",
-    "rimraf": "^5.0.5"
+    "wait-on": "^7.2.0"
   },
   "dependencies": {
-    "chart.js": "^4.4.1"
+    "chart.js": "^4.4.0"
   },
   "build": {
-    "appId": "com.pumpsystem.selector",
+    "appId": "com.pumpselection.app",
     "productName": "Sistema de Seleção de Bombas",
-    "copyright": "Copyright © 2024 Sistema de Bombas",
     "directories": {
-      "output": "dist-electron",
-      "buildResources": "build"
+      "output": "dist-electron"
     },
     "files": [
       "dist/**/*",
       "main.js",
-      "preload.js",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "assets/",
-        "to": "assets/",
-        "filter": ["**/*"]
-      }
+      "preload.js"
     ],
     "win": {
       "target": [
@@ -64,51 +47,17 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "publisherName": "Sistema de Bombas"
-    },
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["x64", "arm64"]
-        }
-      ],
-      "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "assets/icon.png",
-      "category": "Engineering"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "deleteAppDataOnUninstall": false,
-      "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
-      "installerHeaderIcon": "assets/icon.ico",
-      "displayLanguageSelector": false,
-      "language": "1046"
+      "deleteAppDataOnUninstall": false
     },
     "portable": {
-      "artifactName": "${productName}-Portable-${version}.${ext}"
-    },
-    "compression": "maximum",
-    "forceCodeSigning": false
-  },
-  "engines": {
-    "node": ">=16.0.0"
+      "artifactName": "Sistema-Selecao-Bombas-Portable.exe"
+    }
   }
 }

@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Seleção de Bombas</title>
-    
-    <!-- PWA Configuration -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3498db">
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
@@ -13,402 +11,393 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Sistema de Bombas">
-    
-    <!-- Performance Optimizations -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://unpkg.com">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="src/styles/main.css">
-    
-    <!-- Critical CSS inlined for better performance -->
-    <style>
-        /* Critical above-the-fold styles */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-        }
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-        }
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 20px;
-            background: rgba(255,255,255,0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            backdrop-filter: blur(10px);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="loading-screen">
-        <div class="loading-spinner"></div>
-        <h2>Sistema de Seleção de Bombas</h2>
-        <p>Carregando recursos otimizados...</p>
-        <div id="loadingProgress" style="margin-top: 20px; font-size: 14px; opacity: 0.8;"></div>
-    </div>
-
-    <!-- Main Application -->
-    <div class="container" style="display: none;" id="mainApp">
-        <header class="app-header">
-            <h1>Sistema de Seleção de Bombas</h1>
-            <div class="version-info">v2.0.0 - Otimizado</div>
-        </header>
+    <div class="container">
+        <h1>Sistema de Seleção de Bombas</h1>
         
-        <main class="main-content">
-            <section class="chart-section">
-                <div class="chart-container">
-                    <canvas id="pumpChart" aria-label="Gráfico de curvas características da bomba"></canvas>
-                    <div class="chart-controls">
-                        <button id="fullscreenBtn" class="icon-btn" title="Tela cheia">
-                            <span>⛶</span>
-                        </button>
-                        <button id="exportBtn" class="icon-btn" title="Exportar gráfico">
-                            <span>📊</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
+        <div class="main-content">
+            <div class="chart-container">
+                <canvas id="pumpChart"></canvas>
+            </div>
             
-            <aside class="control-panel">
-                <section class="panel-section">
-                    <h3>
-                        <span class="section-icon">⚙️</span>
-                        Dados da Bomba
-                    </h3>
+            <div class="control-panel">
+                <div class="section">
+                    <h3>Dados da Bomba</h3>
                     <div class="form-group">
                         <label for="pumpSelect">Modelo:</label>
-                        <select id="pumpSelect" class="enhanced-select">
+                        <select id="pumpSelect">
                             <option value="BC-21 R 1/2 (3 CV)">BC-21 R 1/2 (3 CV)</option>
                             <option value="BC-21 R 1/2 (4 CV)">BC-21 R 1/2 (4 CV)</option>
                             <option value="Bomba Trabalho">Bomba Trabalho</option>
                         </select>
                     </div>
                     
-                    <div class="info-grid">
-                        <div class="info-card">
-                            <span class="info-label">Potência</span>
-                            <span id="powerInfo" class="info-value">-</span>
+                    <div class="info-display">
+                        <div class="info-item">
+                            <span class="label">Potência (CV):</span>
+                            <span id="powerInfo">-</span>
                         </div>
-                        <div class="info-card">
-                            <span class="info-label">Rotação</span>
-                            <span id="rotationInfo" class="info-value">-</span>
+                        <div class="info-item">
+                            <span class="label">Rotação (rpm):</span>
+                            <span id="rotationInfo">-</span>
                         </div>
-                        <div class="info-card">
-                            <span class="info-label">NPSHr</span>
-                            <span id="npshInfo" class="info-value">-</span>
+                        <div class="info-item">
+                            <span class="label">NPSHr (mca):</span>
+                            <span id="npshInfo">-</span>
                         </div>
-                        <div class="info-card">
-                            <span class="info-label">Rendimento</span>
-                            <span id="efficiencyInfo" class="info-value">-</span>
+                        <div class="info-item">
+                            <span class="label">Rendimento (%):</span>
+                            <span id="efficiencyInfo">-</span>
                         </div>
                     </div>
-                </section>
+                </div>
                 
-                <section class="panel-section">
-                    <h3>
-                        <span class="section-icon">🎯</span>
-                        Ponto de Operação
-                    </h3>
-                    <div class="input-group">
-                        <div class="form-group">
-                            <label for="flowInput">Vazão (m³/h):</label>
-                            <input type="number" id="flowInput" step="0.01" class="enhanced-input" 
-                                   placeholder="Ex: 25.5" autocomplete="off">
-                            <div class="input-feedback" id="flowFeedback"></div>
-                        </div>
-                        <div class="form-group">
-                            <label for="headInput">Altura (m):</label>
-                            <input type="number" id="headInput" step="0.01" class="enhanced-input" 
-                                   placeholder="Ex: 30.2" autocomplete="off">
-                            <div class="input-feedback" id="headFeedback"></div>
-                        </div>
+                <div class="section">
+                    <h3>Definir Ponto de Operação</h3>
+                    <div class="form-group">
+                        <label for="flowInput">Vazão (m³/h):</label>
+                        <input type="number" id="flowInput" step="0.01">
                     </div>
-                    
-                    <div class="button-group">
-                        <button onclick="calculateOperatingPoint()" class="btn btn-primary">
-                            <span class="btn-icon">🧮</span>
-                            Calcular Ponto
-                        </button>
-                        <button onclick="clearAll()" class="btn btn-secondary">
-                            <span class="btn-icon">🗑️</span>
-                            Limpar
-                        </button>
+                    <div class="form-group">
+                        <label for="headInput">Altura (m):</label>
+                        <input type="number" id="headInput" step="0.01">
                     </div>
-                    
-                    <div class="help-text">
-                        <p><strong>Dica:</strong> Insira os valores desejados e pressione Enter ou clique em "Calcular Ponto" para ver os resultados no gráfico.</p>
+                    <div class="form-group">
+                        <button onclick="calculateOperatingPoint()" class="calculate-btn">Calcular Ponto</button>
+                        <button onclick="clearAll()" class="clear-btn">Limpar</button>
                     </div>
-                </section>
+                    <p class="note">Nota: Insira os valores de vazão e altura desejados e clique em "Calcular Ponto" para ver os resultados.</p>
+                </div>
                 
-                <section class="panel-section">
-                    <h3>
-                        <span class="section-icon">📊</span>
-                        Resultados
-                    </h3>
-                    <div class="results-grid">
-                        <div class="result-item">
-                            <span class="result-label">Vazão:</span>
-                            <span id="flowResult" class="result-value">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Altura:</span>
-                            <span id="headResult" class="result-value">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Potência:</span>
-                            <span id="powerResult" class="result-value">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Rendimento:</span>
-                            <span id="efficiencyResult" class="result-value">-</span>
-                        </div>
+                <div class="section">
+                    <h3>Resultados do Ponto de Operação</h3>
+                    <div class="results">
+                        <div id="flowResult">Vazão (m³/h): -</div>
+                        <div id="headResult">Altura (m): -</div>
+                        <div id="powerResult">Potência Resultante (CV): -</div>
+                        <div id="efficiencyResult">Rendimento no Ponto (%): -</div>
+                        <div id="statusResult" class="status-message"></div>
                     </div>
-                    
-                    <div id="statusResult" class="status-message" role="status" aria-live="polite"></div>
-                </section>
-
-                <section class="panel-section performance-info">
-                    <h3>
-                        <span class="section-icon">⚡</span>
-                        Performance
-                    </h3>
-                    <div class="performance-metrics">
-                        <div class="metric">
-                            <span class="metric-label">Cache:</span>
-                            <span id="cacheStatus" class="metric-value">Ativo</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Memória:</span>
-                            <span id="memoryUsage" class="metric-value">Otimizada</span>
-                        </div>
-                    </div>
-                    <button id="optimizeBtn" class="btn btn-outline">
-                        <span class="btn-icon">🚀</span>
-                        Otimizar Sistema
-                    </button>
-                </section>
-            </aside>
-        </main>
-    </div>
-
-    <!-- Error Fallback -->
-    <div id="errorFallback" style="display: none;" class="error-container">
-        <h2>❌ Erro de Carregamento</h2>
-        <p>Não foi possível carregar os recursos necessários.</p>
-        <div class="error-actions">
-            <button onclick="location.reload()" class="btn btn-primary">🔄 Recarregar</button>
-            <button onclick="showOfflineMode()" class="btn btn-secondary">📱 Modo Offline</button>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Scripts -->
-    <script>
-        // Performance monitoring
-        const loadStart = performance.now();
-        let loadingSteps = 0;
-        const totalSteps = 4;
-
-        function updateLoadingProgress(step, message) {
-            loadingSteps = step;
-            const progress = Math.round((step / totalSteps) * 100);
-            const progressEl = document.getElementById('loadingProgress');
-            if (progressEl) {
-                progressEl.textContent = `${message} (${progress}%)`;
-            }
+    
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; display: none;">
+        <div style="text-align: center;">
+            <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+            <p>Carregando recursos...</p>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-
-        // Enhanced loading with fallbacks
-        async function loadChartJS() {
-            updateLoadingProgress(1, 'Carregando Chart.js...');
+        .error-container {
+            text-align: center; 
+            padding: 50px; 
+            background: #f8f9fa; 
+            border-radius: 10px; 
+            margin: 20px; 
+            border: 2px solid #e74c3c;
+        }
+        .offline-container {
+            text-align: center; 
+            padding: 50px; 
+            background: #fff3cd; 
+            border-radius: 10px; 
+            margin: 20px; 
+            border: 2px solid #ffc107;
+        }
+        .btn {
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+    </style>
+    
+    <script>
+        // Configuração global
+        window.CHART_LOAD_TIMEOUT = 15000; // 15 segundos
+        window.MAX_RETRY_ATTEMPTS = 3;
+        window.currentRetryAttempt = 0;
+        
+        // Mostrar indicador de carregamento
+        function showLoading() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.style.display = 'block';
+        }
+        
+        // Esconder indicador de carregamento
+        function hideLoading() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.style.display = 'none';
+        }
+        
+        // Função para carregar Chart.js com múltiplos fallbacks
+        function loadChartJS() {
+            console.log('📦 Carregando Chart.js...');
+            showLoading();
             
             const cdnUrls = [
-                'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js',
-                'https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js'
+                'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js',
+                'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.js',
+                'https://cdn.skypack.dev/chart.js@4.4.0',
+                'https://esm.sh/chart.js@4.4.0'
             ];
             
-            for (let i = 0; i < cdnUrls.length; i++) {
-                try {
-                    await loadScript(cdnUrls[i]);
-                    if (typeof Chart !== 'undefined') {
-                        console.log(`✅ Chart.js carregado da CDN ${i + 1}`);
-                        return true;
-                    }
-                } catch (error) {
-                    console.warn(`⚠️ CDN ${i + 1} falhou:`, error);
-                }
-            }
+            let currentCdnIndex = 0;
             
-            throw new Error('Falha ao carregar Chart.js de todas as CDNs');
-        }
-
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
+            function tryLoadFromCdn(index) {
+                if (index >= cdnUrls.length) {
+                    console.error('❌ Falha ao carregar Chart.js de todas as CDNs');
+                    hideLoading();
+                    handleLoadFailure();
+                    return;
+                }
+                
+                console.log(`🔄 Tentando CDN ${index + 1}/${cdnUrls.length}: ${cdnUrls[index]}`);
+                
                 const script = document.createElement('script');
-                script.src = src;
+                script.src = cdnUrls[index];
                 script.async = true;
-                script.onload = resolve;
-                script.onerror = reject;
+                script.crossOrigin = 'anonymous';
                 
-                const timeout = setTimeout(() => {
-                    reject(new Error('Timeout'));
-                }, 10000);
+                let timeoutId;
+                let loaded = false;
                 
-                script.onload = () => {
-                    clearTimeout(timeout);
-                    resolve();
+                script.onload = function() {
+                    if (loaded) return;
+                    loaded = true;
+                    clearTimeout(timeoutId);
+                    
+                    // Verificar se Chart.js foi realmente carregado
+                    setTimeout(() => {
+                        if (typeof Chart !== 'undefined' && Chart.Chart) {
+                            console.log(`✅ Chart.js carregado com sucesso da CDN ${index + 1}`);
+                            hideLoading();
+                            loadMainScript();
+                        } else {
+                            console.log(`⚠️ Chart.js carregado mas não disponível da CDN ${index + 1}`);
+                            tryLoadFromCdn(index + 1);
+                        }
+                    }, 100);
                 };
                 
+                script.onerror = function() {
+                    if (loaded) return;
+                    loaded = true;
+                    clearTimeout(timeoutId);
+                    console.log(`⚠️ CDN ${index + 1} falhou, tentando próxima...`);
+                    tryLoadFromCdn(index + 1);
+                };
+                
+                // Timeout para CDNs lentas
+                timeoutId = setTimeout(() => {
+                    if (loaded) return;
+                    loaded = true;
+                    console.log(`⏰ Timeout na CDN ${index + 1}, tentando próxima...`);
+                    script.remove();
+                    tryLoadFromCdn(index + 1);
+                }, window.CHART_LOAD_TIMEOUT);
+                
                 document.head.appendChild(script);
-            });
-        }
-
-        async function loadMainScript() {
-            updateLoadingProgress(2, 'Carregando sistema principal...');
+            }
             
-            try {
-                // Load as module for better performance
-                const module = await import('./src/script.js');
-                return module;
-            } catch (error) {
-                // Fallback to regular script loading
-                await loadScript('./src/script.js');
-                return window;
-            }
+            tryLoadFromCdn(0);
         }
-
-        async function initializeApp() {
-            try {
-                updateLoadingProgress(3, 'Inicializando interface...');
-                
-                // Load Chart.js
-                await loadChartJS();
-                
-                // Load main application
-                const appModule = await loadMainScript();
-                
-                updateLoadingProgress(4, 'Finalizando...');
-                
-                // Initialize system
-                if (typeof appModule.initializeSystem === 'function') {
-                    await appModule.initializeSystem();
-                } else if (typeof window.initializeSystem === 'function') {
-                    await window.initializeSystem();
-                }
-                
-                // Hide loading screen and show app
+        
+        // Função para carregar o script principal
+        function loadMainScript() {
+            const script = document.createElement('script');
+            script.src = 'script.js';
+            script.async = true;
+            
+            script.onload = function() {
+                console.log('✅ Script principal carregado');
+                // Aguardar um pouco para garantir que tudo foi inicializado
                 setTimeout(() => {
-                    document.getElementById('loadingScreen').style.display = 'none';
-                    document.getElementById('mainApp').style.display = 'block';
-                    
-                    const loadTime = performance.now() - loadStart;
-                    console.log(`🎉 Aplicação carregada em ${loadTime.toFixed(2)}ms`);
+                    if (typeof window.initializeSystem === 'function') {
+                        window.initializeSystem();
+                    }
                 }, 500);
-                
-            } catch (error) {
-                console.error('❌ Erro na inicialização:', error);
-                showError();
+            };
+            
+            script.onerror = function() {
+                console.error('❌ Erro ao carregar script principal');
+                handleLoadFailure();
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        // Função para lidar com falhas de carregamento
+        function handleLoadFailure() {
+            window.currentRetryAttempt++;
+            
+            if (window.currentRetryAttempt < window.MAX_RETRY_ATTEMPTS) {
+                console.log(`🔄 Tentativa ${window.currentRetryAttempt + 1}/${window.MAX_RETRY_ATTEMPTS} em 3 segundos...`);
+                setTimeout(() => {
+                    loadChartJS();
+                }, 3000);
+                return;
+            }
+            
+            showErrorMessage();
+        }
+        
+        // Função para mostrar mensagem de erro
+        function showErrorMessage() {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h2 style="color: #e74c3c; margin-bottom: 20px;">❌ Erro de Carregamento</h2>
+                        <p style="margin-bottom: 20px; font-size: 16px;">Não foi possível carregar os recursos necessários.</p>
+                        <p style="margin-bottom: 20px; color: #666;">Possíveis causas:</p>
+                        <ul style="text-align: left; max-width: 400px; margin: 0 auto 20px; color: #666;">
+                            <li>Conexão com a internet instável</li>
+                            <li>Bloqueio de recursos externos</li>
+                            <li>Firewall ou proxy corporativo</li>
+                        </ul>
+                        <div style="margin: 20px 0;">
+                            <button onclick="location.reload()" class="btn">
+                                🔄 Recarregar Página
+                            </button>
+                            <button onclick="tryOfflineMode()" class="btn btn-success">
+                                📱 Modo Offline
+                            </button>
+                        </div>
+                        <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                            Se o problema persistir, entre em contato com o suporte técnico.
+                        </p>
+                    </div>
+                `;
             }
         }
-
-        function showError() {
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('errorFallback').style.display = 'block';
-        }
-
-        function showOfflineMode() {
-            alert('Modo offline não implementado nesta versão. Tente recarregar a página.');
-        }
-
-        // Enhanced features
-        function setupEnhancedFeatures() {
-            // Fullscreen chart
-            const fullscreenBtn = document.getElementById('fullscreenBtn');
-            if (fullscreenBtn) {
-                fullscreenBtn.addEventListener('click', () => {
-                    const chartContainer = document.querySelector('.chart-container');
-                    if (chartContainer.requestFullscreen) {
-                        chartContainer.requestFullscreen();
-                    }
-                });
-            }
-
-            // Export chart
-            const exportBtn = document.getElementById('exportBtn');
-            if (exportBtn) {
-                exportBtn.addEventListener('click', () => {
-                    const canvas = document.getElementById('pumpChart');
-                    if (canvas) {
-                        const link = document.createElement('a');
-                        link.download = 'curvas-bomba.png';
-                        link.href = canvas.toDataURL();
-                        link.click();
-                    }
-                });
-            }
-
-            // Optimize system
-            const optimizeBtn = document.getElementById('optimizeBtn');
-            if (optimizeBtn) {
-                optimizeBtn.addEventListener('click', () => {
-                    if (typeof window.cleanupMemory === 'function') {
-                        window.cleanupMemory();
-                        alert('Sistema otimizado com sucesso!');
-                    }
-                });
+        
+        // Modo offline básico (sem gráficos)
+        function tryOfflineMode() {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="offline-container">
+                        <h2 style="color: #856404; margin-bottom: 20px;">📱 Modo Offline</h2>
+                        <p style="margin-bottom: 20px;">O sistema está funcionando em modo limitado.</p>
+                        <p style="margin-bottom: 20px; color: #666;">Recursos disponíveis:</p>
+                        <ul style="text-align: left; max-width: 400px; margin: 0 auto 20px; color: #666;">
+                            <li>Dados técnicos das bombas</li>
+                            <li>Cálculos de interpolação</li>
+                            <li>Validações básicas</li>
+                        </ul>
+                        <p style="color: #856404; font-weight: bold;">Os gráficos não estarão disponíveis neste modo.</p>
+                        <button onclick="location.reload()" class="btn">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>
+                `;
             }
         }
-
-        // Start application
+        
+        // Verificar conectividade
+        function checkConnectivity() {
+            return navigator.onLine;
+        }
+        
+        // Função principal de inicialização
+        function initializeApp() {
+            console.log('🚀 Inicializando aplicação...');
+            
+            if (!checkConnectivity()) {
+                console.log('⚠️ Aplicação offline detectada');
+                showErrorMessage();
+                return;
+            }
+            
+            // Verificar se Chart.js já está carregado (cache do navegador)
+            if (typeof Chart !== 'undefined' && Chart.Chart) {
+                console.log('✅ Chart.js já disponível no cache');
+                hideLoading();
+                loadMainScript();
+                return;
+            }
+            
+            // Carregar Chart.js
+            loadChartJS();
+        }
+        
+        // Event listeners para inicialização
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                initializeApp();
-                setupEnhancedFeatures();
-            });
+            document.addEventListener('DOMContentLoaded', initializeApp);
         } else {
-            initializeApp();
-            setupEnhancedFeatures();
+            // DOM já carregado
+            setTimeout(initializeApp, 100);
         }
-
-        // Service Worker registration
+        
+        // Fallback adicional
+        window.addEventListener('load', () => {
+            if (!window.Chart && window.currentRetryAttempt === 0) {
+                console.log('🔄 Fallback de inicialização...');
+                setTimeout(initializeApp, 1000);
+            }
+        });
+        
+        // Monitorar mudanças de conectividade
+        window.addEventListener('online', () => {
+            console.log('🌐 Conectividade restaurada');
+            if (!window.Chart) {
+                location.reload();
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('📴 Conectividade perdida');
+        });
+        
+        // Registrar Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(registration => console.log('SW registrado:', registration))
-                    .catch(error => console.log('SW falhou:', error));
+                    .then((registration) => {
+                        console.log('SW registrado com sucesso: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('Falha no registro do SW: ', registrationError);
+                    });
             });
         }
+        
+        // Função global para debug
+        window.debugInfo = function() {
+            console.log('🔍 Debug Info:', {
+                chartLoaded: typeof Chart !== 'undefined',
+                onLine: navigator.onLine,
+                retryAttempt: window.currentRetryAttempt,
+                userAgent: navigator.userAgent
+            });
+        };
     </script>
 </body>
 </html>
