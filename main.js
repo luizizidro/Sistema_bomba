@@ -14,7 +14,6 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    // Remover referência ao ícone por enquanto para evitar erro
     show: false,
     titleBarStyle: 'default',
     autoHideMenuBar: false

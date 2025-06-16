@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "description": "Sistema para análise e seleção de bombas centrífugas",
   "author": "Sistema de Bombas <contato@sistemabombas.com>",
-  "type": "module",
   "main": "main.js",
   "scripts": {
     "dev": "vite",
