@@ -130,6 +130,7 @@ const pumpData = {
 
 let chart;
 let operatingPointDatasets = [];
+window.chartInitialized = false;
 
 // Função de interpolação linear
 function interp(x, xp, fp) {
@@ -152,138 +153,146 @@ function initializeSystem() {
     const ctx = document.getElementById('pumpChart');
     if (!ctx) {
         console.error('❌ Canvas não encontrado!');
-        return;
+        return false;
     }
     
     console.log('✅ Canvas encontrado, criando gráfico...');
     
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: []
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
+    try {
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: []
             },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Curvas Características da Bomba',
-                    font: {
-                        size: 16
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
                 },
-                legend: {
-                    position: 'right',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20,
-                        filter: function(legendItem, chartData) {
-                            // Ocultar legendas vazias dos pontos de operação
-                            return legendItem.text !== '';
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Curvas Características da Bomba',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            filter: function(legendItem, chartData) {
+                                // Ocultar legendas vazias dos pontos de operação
+                                return legendItem.text !== '';
+                            }
                         }
                     }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Vazão - Q (m³/h)'
-                    },
-                    grid: {
-                        display: true
-                    },
-                    min: 0
                 },
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'Altura (m)',
-                        color: 'red'
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Vazão - Q (m³/h)'
+                        },
+                        grid: {
+                            display: true
+                        },
+                        min: 0
                     },
-                    ticks: {
-                        color: 'red',
-                        stepSize: 20 // Força intervalos de 20 em 20
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Altura (m)',
+                            color: 'red'
+                        },
+                        ticks: {
+                            color: 'red',
+                            stepSize: 20 // Força intervalos de 20 em 20
+                        },
+                        grid: {
+                            display: true
+                        }
                     },
-                    grid: {
-                        display: true
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Potência (CV)',
+                            color: 'blue'
+                        },
+                        ticks: {
+                            color: 'blue'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        min: 0
+                    },
+                    y2: {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'NPSH (mca)',
+                            color: 'green'
+                        },
+                        ticks: {
+                            color: 'green'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        offset: true,
+                        min: 0
+                    },
+                    y3: {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Rendimento (%)',
+                            color: 'purple'
+                        },
+                        ticks: {
+                            color: 'purple'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        offset: true,
+                        min: 0
                     }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Potência (CV)',
-                        color: 'blue'
-                    },
-                    ticks: {
-                        color: 'blue'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    min: 0
-                },
-                y2: {
-                    type: 'linear',
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'NPSH (mca)',
-                        color: 'green'
-                    },
-                    ticks: {
-                        color: 'green'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    offset: true,
-                    min: 0
-                },
-                y3: {
-                    type: 'linear',
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Rendimento (%)',
-                        color: 'purple'
-                    },
-                    ticks: {
-                        color: 'purple'
-                    },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    offset: true,
-                    min: 0
                 }
             }
+        });
+        
+        console.log('✅ Gráfico criado com sucesso!');
+        window.chartInitialized = true;
+        
+        // Event listeners
+        const pumpSelect = document.getElementById('pumpSelect');
+        if (pumpSelect) {
+            pumpSelect.addEventListener('change', onPumpSelect);
+            console.log('✅ Event listener adicionado ao select');
         }
-    });
-    
-    console.log('✅ Gráfico criado com sucesso!');
-    
-    // Event listeners
-    const pumpSelect = document.getElementById('pumpSelect');
-    if (pumpSelect) {
-        pumpSelect.addEventListener('change', onPumpSelect);
-        console.log('✅ Event listener adicionado ao select');
+        
+        // Inicializar com a primeira bomba
+        onPumpSelect();
+        console.log('🎉 Sistema inicializado completamente!');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erro ao criar gráfico:', error);
+        return false;
     }
-    
-    // Inicializar com a primeira bomba
-    onPumpSelect();
-    console.log('🎉 Sistema inicializado completamente!');
 }
 
 // Inicialização robusta
@@ -293,7 +302,11 @@ function startSystem() {
     // Verificar se Chart.js está carregado
     if (typeof Chart !== 'undefined') {
         console.log('✅ Chart.js disponível');
-        initializeSystem();
+        const success = initializeSystem();
+        if (!success) {
+            console.log('⏳ Falha na inicialização, tentando novamente...');
+            setTimeout(startSystem, 1000);
+        }
     } else {
         console.log('⏳ Chart.js não disponível, tentando novamente...');
         setTimeout(startSystem, 500);
@@ -303,15 +316,15 @@ function startSystem() {
 // Múltiplas tentativas de inicialização
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📄 DOM carregado');
-    startSystem();
+    setTimeout(startSystem, 100);
 });
 
 // Fallback adicional
 window.addEventListener('load', function() {
     console.log('🌐 Window carregado');
-    if (!chart) {
+    if (!window.chartInitialized) {
         console.log('🔄 Tentativa adicional de inicialização...');
-        startSystem();
+        setTimeout(startSystem, 500);
     }
 });
 

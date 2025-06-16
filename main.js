@@ -12,7 +12,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      webSecurity: false, // Permitir carregamento de recursos externos
+      allowRunningInsecureContent: true
     },
     show: false,
     titleBarStyle: 'default',
@@ -25,6 +27,7 @@ function createWindow() {
     // Abrir DevTools em desenvolvimento
     mainWindow.webContents.openDevTools();
   } else {
+    // Carregar arquivo local com protocolo file://
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
 
@@ -32,6 +35,31 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
+    
+    // Debug: verificar se os arquivos estão sendo carregados
+    console.log('🔍 Verificando arquivos...');
+    console.log('📁 Diretório atual:', __dirname);
+    console.log('📄 Arquivo HTML:', path.join(__dirname, 'dist', 'index.html'));
+  });
+
+  // Interceptar erros de carregamento
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('❌ Erro ao carregar:', errorDescription, validatedURL);
+  });
+
+  // Log quando a página terminar de carregar
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ Página carregada com sucesso');
+    
+    // Injetar verificação de Chart.js
+    mainWindow.webContents.executeJavaScript(`
+      console.log('🔍 Verificando Chart.js:', typeof Chart);
+      console.log('🔍 Verificando elementos:', {
+        canvas: !!document.getElementById('pumpChart'),
+        select: !!document.getElementById('pumpSelect'),
+        powerInfo: !!document.getElementById('powerInfo')
+      });
+    `).catch(err => console.error('Erro ao executar JavaScript:', err));
   });
 
   // Criar menu personalizado
