@@ -103,22 +103,24 @@ const pumpData = {
             });
         },
         get npsh_curva() {
-            // NPSH CURVA (não reta) que tem pico de 25 mca
+            // NPSH CURVA corrigida - cresce até ~300 m³/h e depois decresce suavemente
             return this.vazao_data.map(q => {
-                const npshMin = 15; // NPSH mínimo
+                const npshMin = 15; // NPSH inicial
                 const npshMax = 25; // NPSH máximo (pico)
                 const qPico = 300; // Vazão onde ocorre o pico
                 const qMax = 500; // Vazão máxima
                 
                 if (q <= qPico) {
-                    // Crescimento curvo até o pico
+                    // Crescimento suave até o pico em 300 m³/h
                     const normalizedQ = q / qPico;
-                    return npshMin + (npshMax - npshMin) * (0.5 * normalizedQ + 0.5 * normalizedQ * normalizedQ);
+                    // Curva quadrática suave
+                    return npshMin + (npshMax - npshMin) * (0.4 * normalizedQ + 0.6 * normalizedQ * normalizedQ);
                 } else {
-                    // Decrescimento curvo após o pico
+                    // Decrescimento suave após 300 m³/h
                     const normalizedQ = (q - qPico) / (qMax - qPico);
-                    const decrescimento = 0.4 * normalizedQ + 0.1 * normalizedQ * normalizedQ;
-                    return npshMax - (npshMin - npshMin) * 0.4 * decrescimento;
+                    // Decrescimento parabólico suave de 25 para ~22
+                    const decrescimento = 0.3 * normalizedQ + 0.2 * normalizedQ * normalizedQ;
+                    return npshMax - 3 * decrescimento; // Decresce no máximo 3 mca
                 }
             });
         },
