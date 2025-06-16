@@ -14,7 +14,7 @@
     "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
-    "dist-win": "npm run build && electron-builder --win --publish=never"
+    "dist-win": "npm run build && electron-builder --win --publish=never --config.win.sign=null --config.forceCodeSigning=false"
   },
   "devDependencies": {
     "vite": "^5.0.0",
@@ -47,9 +47,7 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "sign": false,
-      "verifyUpdateCodeSignature": false
+      ]
     },
     "mac": {
       "target": "dmg"
@@ -66,7 +64,6 @@
     },
     "portable": {
       "artifactName": "Sistema-Selecao-Bombas-Portable.exe"
-    },
-    "forceCodeSigning": false
+    }
   }
 }
