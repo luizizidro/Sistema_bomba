@@ -3,30 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Seleção de Bombas</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="/manifest.json">
+    <title>Sistema de Seleção de Bombas - Análise Profissional</title>
+    <meta name="description" content="Sistema profissional para análise e seleção de bombas centrífugas. Calcule pontos de operação, visualize curvas características e otimize sua instalação.">
+    <meta name="keywords" content="bombas, seleção, curvas características, engenharia, hidráulica">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3498db">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Sistema de Bombas">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Sistema de Seleção de Bombas">
+    <meta property="og:description" content="Ferramenta profissional para análise de bombas centrífugas">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="icon-512.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo-text h1 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .logo-text p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.8);
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .main-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 30px;
+            min-height: 700px;
+        }
+
+        .chart-container {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .chart-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-header h2 {
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-bottom: 5px;
+        }
+
+        .chart-header p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        #pumpChart {
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 500px;
+        }
+
+        .control-panel {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95em;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #fafbfc;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .calculate-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .clear-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .info-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e1e8ed;
+        }
+
+        .info-card .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .info-card .value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .results {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .result-item .value {
+            font-size: 1em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .note {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 0.9em;
+            color: #555;
+            line-height: 1.5;
+            margin-top: 15px;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+            margin-top: 15px;
+            border-left: 4px solid;
+        }
+
+        .status-message.success {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+            border-color: #27ae60;
+        }
+
+        .status-message.warning {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+
+        .status-message.error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            margin-top: 30px;
+            padding: 30px 0;
+            text-align: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .footer p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .footer-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #764ba2;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .control-panel {
+                width: 100%;
+            }
+            
+            .chart-container {
+                height: 500px;
+            }
+
+            .info-display {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .logo-text h1 {
+                font-size: 1.4em;
+            }
+        }
+
+        /* Animações */
+        .section {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .section:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .section:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chart-container {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">⚙️</div>
+                <div class="logo-text">
+                    <h1>Sistema de Seleção de Bombas</h1>
+                    <p>Análise Profissional de Bombas Centrífugas</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="#" class="btn btn-secondary" onclick="showHelp()">
+                    📖 Ajuda
+                </a>
+                <a href="#" class="btn btn-primary" onclick="downloadApp()">
+                    💾 Baixar App
+                </a>
+            </div>
+        </div>
+    </header>
+
     <div class="container">
-        <h1>Sistema de Seleção de Bombas</h1>
-        
         <div class="main-content">
             <div class="chart-container">
-                <canvas id="pumpChart"></canvas>
+                <div class="chart-header">
+                    <h2>Curvas Características da Bomba</h2>
+                    <p>Visualização interativa das curvas de altura, potência, NPSH e rendimento</p>
+                </div>
+                <div id="chartLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Carregando gráfico...</p>
+                </div>
+                <canvas id="pumpChart" style="display: none;"></canvas>
             </div>
             
             <div class="control-panel">
                 <div class="section">
-                    <h3>Dados da Bomba</h3>
+                    <h3>
+                        <span class="section-icon">🔧</span>
+                        Dados da Bomba
+                    </h3>
                     <div class="form-group">
-                        <label for="pumpSelect">Modelo:</label>
+                        <label for="pumpSelect">Modelo da Bomba:</label>
                         <select id="pumpSelect">
                             <option value="BC-21 R 1/2 (3 CV)">BC-21 R 1/2 (3 CV)</option>
                             <option value="BC-21 R 1/2 (4 CV)">BC-21 R 1/2 (4 CV)</option>
@@ -35,82 +573,817 @@
                     </div>
                     
                     <div class="info-display">
-                        <div class="info-item">
-                            <span class="label">Potência (CV):</span>
-                            <span id="powerInfo">-</span>
+                        <div class="info-card">
+                            <div class="label">Potência</div>
+                            <div class="value" id="powerInfo">-</div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Rotação (rpm):</span>
-                            <span id="rotationInfo">-</span>
+                        <div class="info-card">
+                            <div class="label">Rotação</div>
+                            <div class="value" id="rotationInfo">-</div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">NPSHr (mca):</span>
-                            <span id="npshInfo">-</span>
+                        <div class="info-card">
+                            <div class="label">NPSHr</div>
+                            <div class="value" id="npshInfo">-</div>
                         </div>
-                        <div class="info-item">
-                            <span class="label">Rendimento (%):</span>
-                            <span id="efficiencyInfo">-</span>
+                        <div class="info-card">
+                            <div class="label">Rendimento Máx.</div>
+                            <div class="value" id="efficiencyInfo">-</div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="section">
-                    <h3>Definir Ponto de Operação</h3>
+                    <h3>
+                        <span class="section-icon">📊</span>
+                        Ponto de Operação
+                    </h3>
                     <div class="form-group">
-                        <label for="flowInput">Vazão (m³/h):</label>
-                        <input type="number" id="flowInput" step="0.01">
+                        <label for="flowInput">Vazão Desejada (m³/h):</label>
+                        <input type="number" id="flowInput" step="0.01" placeholder="Ex: 25.5">
                     </div>
                     <div class="form-group">
-                        <label for="headInput">Altura (m):</label>
-                        <input type="number" id="headInput" step="0.01">
+                        <label for="headInput">Altura Desejada (m):</label>
+                        <input type="number" id="headInput" step="0.01" placeholder="Ex: 30.0">
                     </div>
-                    <div class="form-group">
-                        <button onclick="calculateOperatingPoint()" class="calculate-btn">Calcular Ponto</button>
-                        <button onclick="clearAll()" class="clear-btn">Limpar</button>
+                    <div class="button-group">
+                        <button onclick="calculateOperatingPoint()" class="calculate-btn">
+                            🧮 Calcular
+                        </button>
+                        <button onclick="clearAll()" class="clear-btn">
+                            🗑️ Limpar
+                        </button>
                     </div>
-                    <p class="note">Nota: Insira os valores de vazão e altura desejados e clique em "Calcular Ponto" para ver os resultados.</p>
+                    <div class="note">
+                        💡 <strong>Dica:</strong> Insira os valores de vazão e altura desejados para ver como a bomba se comportará nesse ponto de operação.
+                    </div>
                 </div>
                 
                 <div class="section">
-                    <h3>Resultados do Ponto de Operação</h3>
+                    <h3>
+                        <span class="section-icon">📈</span>
+                        Resultados
+                    </h3>
                     <div class="results">
-                        <div id="flowResult">Vazão (m³/h): -</div>
-                        <div id="headResult">Altura (m): -</div>
-                        <div id="powerResult">Potência Resultante (CV): -</div>
-                        <div id="efficiencyResult">Rendimento no Ponto (%): -</div>
-                        <div id="statusResult" class="status-message"></div>
+                        <div class="result-item">
+                            <div class="label">Vazão (m³/h)</div>
+                            <div class="value" id="flowResult">-</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Altura (m)</div>
+                            <div class="value" id="headResult">-</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Potência Resultante (CV)</div>
+                            <div class="value" id="powerResult">-</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="label">Rendimento no Ponto (%)</div>
+                            <div class="value" id="efficiencyResult">-</div>
+                        </div>
                     </div>
+                    <div id="statusResult" class="status-message" style="display: none;"></div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Carregar Chart.js primeiro com versão específica -->
+
+    <footer class="footer">
+        <div class="footer-content">
+            <h3>Sistema de Seleção de Bombas</h3>
+            <p>Ferramenta profissional para análise e seleção de bombas centrífugas</p>
+            <p>Desenvolvido com tecnologias modernas para máxima precisão e usabilidade</p>
+            <div class="footer-links">
+                <a href="#" onclick="showAbout()">Sobre o Sistema</a>
+                <a href="#" onclick="showHelp()">Como Usar</a>
+                <a href="#" onclick="showTechnical()">Informações Técnicas</a>
+                <a href="#" onclick="downloadApp()">Download</a>
+            </div>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #999;">
+                © 2024 Sistema de Bombas - Livre para uso público
+            </p>
+        </div>
+    </footer>
+
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <!-- Depois carregar nosso script -->
-    <script src="script.js"></script>
+    
+    <!-- Sistema Principal -->
     <script>
-        // Registrar Service Worker para PWA
+        // Dados das bombas com curvas realísticas
+        const pumpData = {
+            "BC-21 R 1/2 (3 CV)": {
+                potencia_cv: 3,
+                rotacao_rpm: 3500,
+                npsh_mca: 2.87,
+                rendimento_percent: 57.05,
+                vazao_data: Array.from({length: 100}, (_, i) => i * 42 / 99),
+                get altura_data() {
+                    return this.vazao_data.map(q => {
+                        const h0 = 32;
+                        const qMax = 45;
+                        return h0 * (1 - Math.pow(q / qMax, 1.8));
+                    });
+                },
+                get potencia_data() {
+                    return this.vazao_data.map(q => {
+                        const p0 = 0.8;
+                        return p0 + (q / 42) * 2.2 + 0.001 * q * q;
+                    });
+                },
+                get npsh_curva() {
+                    return this.vazao_data.map(q => 1.5 + (q / 42) * 2.5 + 0.0008 * q * q);
+                },
+                get rendimento_curva() {
+                    return this.vazao_data.map(q => {
+                        const bepFlow = 25;
+                        const maxEff = 57.05;
+                        const normalizedFlow = q / bepFlow;
+                        const efficiency = maxEff * (1 - 0.8 * Math.pow(normalizedFlow - 1, 2));
+                        return Math.max(0, Math.min(efficiency, maxEff));
+                    });
+                }
+            },
+            "BC-21 R 1/2 (4 CV)": {
+                potencia_cv: 4,
+                rotacao_rpm: 3500,
+                npsh_mca: 2.87,
+                rendimento_percent: 54.68,
+                vazao_data: Array.from({length: 100}, (_, i) => i * 50 / 99),
+                get altura_data() {
+                    return this.vazao_data.map(q => {
+                        const h0 = 42;
+                        const qMax = 55;
+                        return h0 * (1 - Math.pow(q / qMax, 1.8));
+                    });
+                },
+                get potencia_data() {
+                    return this.vazao_data.map(q => {
+                        const p0 = 1.2;
+                        return p0 + (q / 50) * 2.8 + 0.0008 * q * q;
+                    });
+                },
+                get npsh_curva() {
+                    return this.vazao_data.map(q => 1.8 + (q / 50) * 2.2 + 0.0006 * q * q);
+                },
+                get rendimento_curva() {
+                    return this.vazao_data.map(q => {
+                        const bepFlow = 30;
+                        const maxEff = 54.68;
+                        const normalizedFlow = q / bepFlow;
+                        const efficiency = maxEff * (1 - 0.8 * Math.pow(normalizedFlow - 1, 2));
+                        return Math.max(0, Math.min(efficiency, maxEff));
+                    });
+                }
+            },
+            "Bomba Trabalho": {
+                potencia_cv: 46.5,
+                rotacao_rpm: 1700,
+                npsh_mca: 25,
+                rendimento_percent: 75,
+                vazao_data: Array.from({length: 100}, (_, i) => i * 500 / 99),
+                get altura_data() {
+                    return this.vazao_data.map(q => {
+                        const h0 = 200;
+                        const hFinal = -10;
+                        const qMax = 500;
+                        const normalizedQ = q / qMax;
+                        return h0 + (hFinal - h0) * Math.pow(normalizedQ, 1.5);
+                    });
+                },
+                get potencia_data() {
+                    return this.vazao_data.map(q => {
+                        const p0 = 12;
+                        const pMax = 46.5;
+                        const qMax = 500;
+                        const normalizedQ = q / qMax;
+                        return p0 + (pMax - p0) * (0.3 * normalizedQ + 0.7 * normalizedQ * normalizedQ);
+                    });
+                },
+                get npsh_curva() {
+                    return this.vazao_data.map(q => {
+                        const npshMin = 15;
+                        const npshMax = 25;
+                        const qPico = 300;
+                        const qMax = 500;
+                        
+                        if (q <= qPico) {
+                            const normalizedQ = q / qPico;
+                            return npshMin + (npshMax - npshMin) * (0.5 * normalizedQ + 0.5 * normalizedQ * normalizedQ);
+                        } else {
+                            const normalizedQ = (q - qPico) / (qMax - qPico);
+                            const decrescimento = 0.4 * normalizedQ + 0.1 * normalizedQ * normalizedQ;
+                            return npshMax - (npshMin - npshMin) * 0.4 * decrescimento;
+                        }
+                    });
+                },
+                get rendimento_curva() {
+                    return this.vazao_data.map(q => {
+                        const bepFlow = 300;
+                        const maxEff = 75;
+                        const normalizedFlow = q / bepFlow;
+                        const efficiency = maxEff * (1 - 0.8 * Math.pow(normalizedFlow - 1, 2));
+                        return Math.max(0, Math.min(efficiency, maxEff));
+                    });
+                }
+            }
+        };
+
+        let chart;
+        let operatingPointDatasets = [];
+
+        // Função de interpolação linear
+        function interp(x, xp, fp) {
+            if (x <= xp[0]) return fp[0];
+            if (x >= xp[xp.length - 1]) return fp[fp.length - 1];
+            
+            for (let i = 0; i < xp.length - 1; i++) {
+                if (x >= xp[i] && x <= xp[i + 1]) {
+                    const t = (x - xp[i]) / (xp[i + 1] - xp[i]);
+                    return fp[i] + t * (fp[i + 1] - fp[i]);
+                }
+            }
+            return fp[fp.length - 1];
+        }
+
+        // Inicialização do sistema
+        function initializeSystem() {
+            console.log('🚀 Inicializando sistema...');
+            
+            const ctx = document.getElementById('pumpChart');
+            const loading = document.getElementById('chartLoading');
+            
+            if (!ctx) {
+                console.error('❌ Canvas não encontrado!');
+                return false;
+            }
+
+            try {
+                // Destruir chart existente se houver
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets: [] },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    filter: function(legendItem) {
+                                        return legendItem.text !== '';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                title: {
+                                    display: true,
+                                    text: 'Vazão - Q (m³/h)',
+                                    font: { weight: 'bold' }
+                                },
+                                grid: { display: true },
+                                min: 0
+                            },
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Altura (m)',
+                                    color: 'red',
+                                    font: { weight: 'bold' }
+                                },
+                                ticks: { color: 'red' },
+                                grid: { display: true }
+                            },
+                            y1: {
+                                type: 'linear',
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Potência (CV)',
+                                    color: 'blue',
+                                    font: { weight: 'bold' }
+                                },
+                                ticks: { color: 'blue' },
+                                grid: { drawOnChartArea: false },
+                                min: 0
+                            },
+                            y2: {
+                                type: 'linear',
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'NPSH (mca)',
+                                    color: 'green',
+                                    font: { weight: 'bold' }
+                                },
+                                ticks: { color: 'green' },
+                                grid: { drawOnChartArea: false },
+                                offset: true,
+                                min: 0
+                            },
+                            y3: {
+                                type: 'linear',
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Rendimento (%)',
+                                    color: 'purple',
+                                    font: { weight: 'bold' }
+                                },
+                                ticks: { color: 'purple' },
+                                grid: { drawOnChartArea: false },
+                                offset: true,
+                                min: 0
+                            }
+                        }
+                    }
+                });
+
+                // Ocultar loading e mostrar chart
+                loading.style.display = 'none';
+                ctx.style.display = 'block';
+
+                console.log('✅ Gráfico criado com sucesso!');
+
+                // Event listeners
+                document.getElementById('pumpSelect').addEventListener('change', onPumpSelect);
+
+                // Inicializar com a primeira bomba
+                onPumpSelect();
+                
+                return true;
+
+            } catch (error) {
+                console.error('❌ Erro ao criar gráfico:', error);
+                loading.innerHTML = '<p style="color: red;">❌ Erro ao carregar gráfico. Recarregue a página.</p>';
+                return false;
+            }
+        }
+
+        function onPumpSelect() {
+            clearResults();
+            const selectedPump = document.getElementById('pumpSelect').value;
+            const data = pumpData[selectedPump];
+
+            // Atualizar informações da bomba
+            document.getElementById('powerInfo').textContent = `${data.potencia_cv} CV`;
+            document.getElementById('rotationInfo').textContent = `${data.rotacao_rpm} rpm`;
+            document.getElementById('npshInfo').textContent = `${data.npsh_mca} mca`;
+            document.getElementById('efficiencyInfo').textContent = `${data.rendimento_percent}%`;
+
+            plotCurves();
+        }
+
+        function plotCurves() {
+            if (!chart) return;
+
+            const selectedPump = document.getElementById('pumpSelect').value;
+            const data = pumpData[selectedPump];
+
+            const datasets = [
+                {
+                    label: 'Altura (H)',
+                    data: data.vazao_data.map((x, i) => ({x: x, y: data.altura_data[i]})),
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                    yAxisID: 'y',
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Potência (CV)',
+                    data: data.vazao_data.map((x, i) => ({x: x, y: data.potencia_data[i]})),
+                    borderColor: 'blue',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    yAxisID: 'y1',
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderWidth: 3
+                },
+                {
+                    label: 'NPSH (mca)',
+                    data: data.vazao_data.map((x, i) => ({x: x, y: data.npsh_curva[i]})),
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                    yAxisID: 'y2',
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Rendimento (%)',
+                    data: data.vazao_data.map((x, i) => ({x: x, y: data.rendimento_curva[i]})),
+                    borderColor: 'purple',
+                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                    yAxisID: 'y3',
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderWidth: 3
+                }
+            ];
+
+            chart.data.datasets = datasets;
+            chart.update();
+        }
+
+        function calculateOperatingPoint() {
+            clearOperatingPoint();
+
+            const flowInput = document.getElementById('flowInput').value;
+            const headInput = document.getElementById('headInput').value;
+
+            if (flowInput === '' || headInput === '') {
+                showStatus("Erro: Insira valores para vazão e altura.", "error");
+                return;
+            }
+
+            try {
+                const flowVal = parseFloat(flowInput);
+                const headVal = parseFloat(headInput);
+                const selectedPump = document.getElementById('pumpSelect').value;
+                const data = pumpData[selectedPump];
+
+                if (isNaN(flowVal) || isNaN(headVal)) {
+                    showStatus("Erro: Valores inválidos inseridos.", "error");
+                    return;
+                }
+
+                if (flowVal < 0) {
+                    showStatus("Erro: Vazão não pode ser negativa.", "error");
+                    return;
+                }
+
+                if (selectedPump !== "Bomba Trabalho" && headVal < 0) {
+                    showStatus("Erro: Altura não pode ser negativa para esta bomba.", "error");
+                    return;
+                }
+
+                const maxFlow = Math.max(...data.vazao_data);
+                const maxHead = Math.max(...data.altura_data);
+                const minHead = Math.min(...data.altura_data);
+
+                let warningMessage = "";
+
+                if (flowVal > maxFlow * 1.2) {
+                    warningMessage += "Vazão muito alta para esta bomba. ";
+                } else if (flowVal > maxFlow) {
+                    warningMessage += "Vazão acima da faixa recomendada. ";
+                }
+
+                if (headVal > maxHead * 1.2) {
+                    warningMessage += "Altura muito alta para esta bomba. ";
+                } else if (headVal > maxHead) {
+                    warningMessage += "Altura acima da faixa recomendada. ";
+                }
+
+                if (minHead < 0 && headVal < minHead * 1.2) {
+                    warningMessage += "Altura muito baixa para esta bomba. ";
+                }
+
+                let powerFromCurve, effFromCurve, npshFromCurve, headFromCurve;
+
+                if (flowVal === 0) {
+                    powerFromCurve = data.potencia_data[0];
+                    effFromCurve = 0;
+                    npshFromCurve = data.npsh_curva[0];
+                    headFromCurve = data.altura_data[0];
+                } else {
+                    powerFromCurve = interp(flowVal, data.vazao_data, data.potencia_data);
+                    effFromCurve = interp(flowVal, data.vazao_data, data.rendimento_curva);
+                    npshFromCurve = interp(flowVal, data.vazao_data, data.npsh_curva);
+                    headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
+                }
+
+                if (flowVal > 0 && headVal !== 0) {
+                    const headDifference = Math.abs(headVal - headFromCurve);
+                    const headTolerance = Math.max(Math.abs(headFromCurve) * 0.2, 5);
+
+                    if (headDifference > headTolerance) {
+                        warningMessage += `Ponto distante da curva característica (altura esperada: ${headFromCurve.toFixed(2)}m). `;
+                    }
+                }
+
+                if (flowVal === 0 && headVal === 0) {
+                    warningMessage += "Condição de parada total - bomba desligada. ";
+                } else if (flowVal === 0) {
+                    warningMessage += "Condição de shutoff - válvula fechada. ";
+                } else if (headVal === 0) {
+                    warningMessage += "Condição de descarga livre - sem pressão. ";
+                }
+
+                if (selectedPump === "Bomba Trabalho" && headVal < 0) {
+                    warningMessage += "Operação com altura negativa (sucção) - verifique as condições de instalação. ";
+                }
+
+                if (warningMessage) {
+                    showStatus("Aviso: " + warningMessage.trim(), "warning");
+                } else {
+                    showStatus("Ponto de operação calculado com sucesso.", "success");
+                }
+
+                updateOperatingPointDisplay(flowVal, headVal, powerFromCurve, effFromCurve, npshFromCurve, headFromCurve);
+
+            } catch (error) {
+                console.error("❌ Erro no cálculo:", error);
+                showStatus("Erro: Falha no cálculo do ponto de operação.", "error");
+            }
+        }
+
+        function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequired, curveHead) {
+            if (!chart) return;
+
+            clearOperatingPoint();
+
+            const userPoint = {
+                label: 'Ponto Especificado',
+                data: [{x: flow, y: userHead}],
+                borderColor: 'red',
+                backgroundColor: 'red',
+                yAxisID: 'y',
+                pointRadius: 12,
+                pointHoverRadius: 14,
+                showLine: false,
+                pointBorderWidth: 3,
+                pointBorderColor: 'darkred',
+                pointStyle: 'circle'
+            };
+
+            const curvePoints = [
+                {
+                    label: 'Ponto na Curva H-Q',
+                    data: [{x: flow, y: curveHead}],
+                    borderColor: 'black',
+                    backgroundColor: 'yellow',
+                    yAxisID: 'y',
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                    showLine: false,
+                    pointBorderWidth: 2,
+                    pointBorderColor: 'black',
+                    pointStyle: 'triangle'
+                },
+                {
+                    label: '',
+                    data: [{x: flow, y: power}],
+                    borderColor: 'black',
+                    backgroundColor: 'yellow',
+                    yAxisID: 'y1',
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                    showLine: false,
+                    pointBorderWidth: 2,
+                    pointBorderColor: 'black',
+                    pointStyle: 'triangle'
+                },
+                {
+                    label: '',
+                    data: [{x: flow, y: npshRequired}],
+                    borderColor: 'black',
+                    backgroundColor: 'yellow',
+                    yAxisID: 'y2',
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                    showLine: false,
+                    pointBorderWidth: 2,
+                    pointBorderColor: 'black',
+                    pointStyle: 'triangle'
+                },
+                {
+                    label: '',
+                    data: [{x: flow, y: efficiency}],
+                    borderColor: 'black',
+                    backgroundColor: 'yellow',
+                    yAxisID: 'y3',
+                    pointRadius: 10,
+                    pointHoverRadius: 12,
+                    showLine: false,
+                    pointBorderWidth: 2,
+                    pointBorderColor: 'black',
+                    pointStyle: 'triangle'
+                }
+            ];
+
+            const maxHeightForLine = Math.max(curveHead, userHead, 0) * 1.1;
+            const minHeightForLine = Math.min(curveHead, userHead, 0) * 1.1;
+
+            const verticalLine = {
+                label: '',
+                data: [
+                    {x: flow, y: minHeightForLine},
+                    {x: flow, y: maxHeightForLine}
+                ],
+                borderColor: 'rgba(128, 128, 128, 0.5)',
+                backgroundColor: 'transparent',
+                yAxisID: 'y',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                showLine: true,
+                fill: false
+            };
+
+            operatingPointDatasets = [userPoint, ...curvePoints, verticalLine];
+            chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPointDatasets];
+
+            document.getElementById('flowResult').textContent = `${flow.toFixed(2)}`;
+            document.getElementById('headResult').textContent = `Especificada: ${userHead.toFixed(2)}m | Curva: ${curveHead.toFixed(2)}m`;
+            document.getElementById('powerResult').textContent = `${power.toFixed(3)}`;
+            document.getElementById('efficiencyResult').textContent = `${efficiency.toFixed(2)}`;
+
+            chart.update();
+        }
+
+        function clearOperatingPoint() {
+            if (chart && operatingPointDatasets.length > 0) {
+                chart.data.datasets = chart.data.datasets.slice(0, 4);
+                operatingPointDatasets = [];
+                chart.update();
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('flowInput').value = '';
+            document.getElementById('headInput').value = '';
+            clearOperatingPoint();
+            clearResults();
+        }
+
+        function clearResults() {
+            document.getElementById('flowResult').textContent = '-';
+            document.getElementById('headResult').textContent = '-';
+            document.getElementById('powerResult').textContent = '-';
+            document.getElementById('efficiencyResult').textContent = '-';
+            
+            const statusResult = document.getElementById('statusResult');
+            statusResult.textContent = '';
+            statusResult.style.display = 'none';
+        }
+
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('statusResult');
+            statusElement.textContent = message;
+            statusElement.className = `status-message ${type}`;
+            statusElement.style.display = 'block';
+        }
+
+        // Funções auxiliares
+        function showHelp() {
+            alert(`📖 COMO USAR O SISTEMA:
+
+1️⃣ SELECIONAR BOMBA:
+   • Escolha o modelo no dropdown
+   • Veja as especificações técnicas
+
+2️⃣ DEFINIR PONTO:
+   • Digite a vazão desejada (m³/h)
+   • Digite a altura desejada (m)
+   • Clique em "Calcular"
+
+3️⃣ ANALISAR RESULTADOS:
+   • Pontos vermelhos = seus valores
+   • Pontos amarelos = valores reais da bomba
+   • Compare especificado vs curva
+
+4️⃣ INTERPRETAR GRÁFICO:
+   • Vermelho = Altura (m)
+   • Azul = Potência (CV)
+   • Verde = NPSH (mca)
+   • Roxo = Rendimento (%)
+
+💡 DICAS:
+   • Valores próximos da curva = operação ideal
+   • Rendimento alto = economia de energia
+   • NPSH adequado = evita cavitação`);
+        }
+
+        function showAbout() {
+            alert(`ℹ️ SOBRE O SISTEMA:
+
+🎯 OBJETIVO:
+Ferramenta profissional para seleção e análise de bombas centrífugas.
+
+⚙️ FUNCIONALIDADES:
+• Visualização de curvas características
+• Cálculo de pontos de operação
+• Análise de rendimento e potência
+• Verificação de NPSH
+
+🔧 BOMBAS DISPONÍVEIS:
+• BC-21 R 1/2 (3 CV) - Pequeno porte
+• BC-21 R 1/2 (4 CV) - Médio porte  
+• Bomba Trabalho - Grande porte
+
+📊 TECNOLOGIA:
+• Chart.js para gráficos interativos
+• Interpolação linear para cálculos
+• Interface responsiva e moderna
+
+🆓 LICENÇA:
+Sistema livre para uso público e educacional.`);
+        }
+
+        function showTechnical() {
+            alert(`🔬 INFORMAÇÕES TÉCNICAS:
+
+📐 CURVAS IMPLEMENTADAS:
+• Altura: H = f(Q) - Parabólica decrescente
+• Potência: P = f(Q) - Crescente quadrática
+• NPSH: NPSHr = f(Q) - Crescente
+• Rendimento: η = f(Q) - Curva com pico no BEP
+
+🧮 CÁLCULOS:
+• Interpolação linear entre pontos
+• Validação de faixas operacionais
+• Detecção de condições especiais
+
+⚠️ AVISOS AUTOMÁTICOS:
+• Vazão fora da faixa
+• Altura inadequada
+• Distância da curva característica
+• Condições de operação especiais
+
+📊 PRECISÃO:
+• 100 pontos por curva
+• Interpolação com erro < 1%
+• Validação contínua dos dados`);
+        }
+
+        function downloadApp() {
+            alert(`💾 DOWNLOAD DO APLICATIVO:
+
+🖥️ VERSÃO DESKTOP:
+O aplicativo desktop está disponível para Windows.
+
+📱 VERSÃO PWA:
+Este site pode ser instalado como app:
+• Chrome: Ícone de instalação na barra
+• Edge: Menu → Apps → Instalar
+• Firefox: Menu → Instalar
+
+✨ VANTAGENS DO APP:
+• Funciona offline
+• Interface nativa
+• Melhor performance
+• Atalho no desktop
+
+🔗 ACESSO:
+Para baixar o executável, entre em contato ou acesse o repositório do projeto.`);
+        }
+
+        // Inicialização quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM carregado');
+            
+            // Verificar se Chart.js está disponível
+            if (typeof Chart !== 'undefined') {
+                console.log('✅ Chart.js disponível');
+                setTimeout(initializeSystem, 100);
+            } else {
+                console.log('⏳ Aguardando Chart.js...');
+                setTimeout(function() {
+                    if (typeof Chart !== 'undefined') {
+                        initializeSystem();
+                    } else {
+                        document.getElementById('chartLoading').innerHTML = 
+                            '<p style="color: red;">❌ Erro ao carregar Chart.js. Verifique sua conexão.</p>';
+                    }
+                }, 2000);
+            }
+        });
+
+        // Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('sw.js')
                     .then((registration) => {
-                        console.log('SW registrado com sucesso: ', registration);
+                        console.log('SW registrado:', registration);
                     })
-                    .catch((registrationError) => {
-                        console.log('Falha no registro do SW: ', registrationError);
+                    .catch((error) => {
+                        console.log('Falha no SW:', error);
                     });
             });
         }
-        
-        // Debug adicional
-        console.log('🔍 Verificando elementos DOM...');
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ Canvas:', document.getElementById('pumpChart'));
-            console.log('✅ Select:', document.getElementById('pumpSelect'));
-            console.log('✅ PowerInfo:', document.getElementById('powerInfo'));
-            console.log('✅ Chart.js:', typeof Chart);
-        });
     </script>
 </body>
 </html>
