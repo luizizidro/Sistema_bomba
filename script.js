@@ -145,9 +145,17 @@ function interp(x, xp, fp) {
     return fp[fp.length - 1];
 }
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('pumpChart').getContext('2d');
+// Aguardar o carregamento completo da página
+function initializeSystem() {
+    console.log('Inicializando sistema...');
+    
+    const ctx = document.getElementById('pumpChart');
+    if (!ctx) {
+        console.error('Canvas não encontrado!');
+        return;
+    }
+    
+    console.log('Canvas encontrado, criando gráfico...');
     
     chart = new Chart(ctx, {
         type: 'line',
@@ -264,30 +272,84 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    console.log('Gráfico criado com sucesso!');
+    
     // Event listeners
-    document.getElementById('pumpSelect').addEventListener('change', onPumpSelect);
+    const pumpSelect = document.getElementById('pumpSelect');
+    if (pumpSelect) {
+        pumpSelect.addEventListener('change', onPumpSelect);
+        console.log('Event listener adicionado ao select');
+    }
     
     // Inicializar com a primeira bomba
     onPumpSelect();
+    console.log('Sistema inicializado completamente!');
+}
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado, aguardando Chart.js...');
+    
+    // Verificar se Chart.js está carregado
+    if (typeof Chart !== 'undefined') {
+        console.log('Chart.js já carregado');
+        initializeSystem();
+    } else {
+        console.log('Aguardando Chart.js...');
+        // Aguardar um pouco para o Chart.js carregar
+        setTimeout(() => {
+            if (typeof Chart !== 'undefined') {
+                console.log('Chart.js carregado após timeout');
+                initializeSystem();
+            } else {
+                console.error('Chart.js não foi carregado!');
+                // Tentar carregar Chart.js dinamicamente
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+                script.onload = () => {
+                    console.log('Chart.js carregado dinamicamente');
+                    initializeSystem();
+                };
+                document.head.appendChild(script);
+            }
+        }, 1000);
+    }
 });
 
 function onPumpSelect() {
+    console.log('Bomba selecionada');
     clearResults();
     const selectedPump = document.getElementById('pumpSelect').value;
     const data = pumpData[selectedPump];
     
+    console.log('Dados da bomba:', data);
+    
     // Atualizar informações da bomba
-    document.getElementById('powerInfo').textContent = `${data.potencia_cv} CV`;
-    document.getElementById('rotationInfo').textContent = `${data.rotacao_rpm} rpm`;
-    document.getElementById('npshInfo').textContent = `${data.npsh_mca} mca`;
-    document.getElementById('efficiencyInfo').textContent = `${data.rendimento_percent}%`;
+    const powerInfo = document.getElementById('powerInfo');
+    const rotationInfo = document.getElementById('rotationInfo');
+    const npshInfo = document.getElementById('npshInfo');
+    const efficiencyInfo = document.getElementById('efficiencyInfo');
+    
+    if (powerInfo) powerInfo.textContent = `${data.potencia_cv} CV`;
+    if (rotationInfo) rotationInfo.textContent = `${data.rotacao_rpm} rpm`;
+    if (npshInfo) npshInfo.textContent = `${data.npsh_mca} mca`;
+    if (efficiencyInfo) efficiencyInfo.textContent = `${data.rendimento_percent}%`;
+    
+    console.log('Informações da bomba atualizadas');
     
     plotCurves();
 }
 
 function plotCurves() {
+    if (!chart) {
+        console.error('Gráfico não inicializado!');
+        return;
+    }
+    
     const selectedPump = document.getElementById('pumpSelect').value;
     const data = pumpData[selectedPump];
+    
+    console.log('Plotando curvas para:', selectedPump);
     
     const datasets = [
         {
@@ -338,9 +400,11 @@ function plotCurves() {
     
     chart.data.datasets = datasets;
     chart.update();
+    console.log('Curvas plotadas com sucesso!');
 }
 
 function calculateOperatingPoint() {
+    console.log('Calculando ponto de operação...');
     clearOperatingPoint();
     
     const flowInput = document.getElementById('flowInput').value;
@@ -356,6 +420,8 @@ function calculateOperatingPoint() {
         const headVal = parseFloat(headInput);
         const selectedPump = document.getElementById('pumpSelect').value;
         const data = pumpData[selectedPump];
+        
+        console.log('Valores:', { flowVal, headVal, selectedPump });
         
         if (isNaN(flowVal) || isNaN(headVal)) {
             showStatus("Erro: Valores inválidos inseridos.", "error");
@@ -427,6 +493,8 @@ function calculateOperatingPoint() {
             headFromCurve = interp(flowVal, data.vazao_data, data.altura_data);
         }
         
+        console.log('Valores calculados:', { powerFromCurve, effFromCurve, npshFromCurve, headFromCurve });
+        
         // Verificar se o ponto está próximo da curva característica (apenas se não for zero)
         if (flowVal > 0 && headVal !== 0) {
             const headDifference = Math.abs(headVal - headFromCurve);
@@ -467,6 +535,12 @@ function calculateOperatingPoint() {
 }
 
 function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequired, curveHead) {
+    if (!chart) {
+        console.error('Gráfico não disponível para atualizar pontos');
+        return;
+    }
+    
+    console.log('Atualizando display do ponto de operação');
     clearOperatingPoint();
     
     // Adicionar pontos de operação ao gráfico
@@ -565,16 +639,22 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
     chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPointDatasets];
     
     // Atualizar resultados com valores das curvas da bomba
-    document.getElementById('flowResult').textContent = `Vazão (m³/h): ${flow.toFixed(2)}`;
-    document.getElementById('headResult').textContent = `Altura Especificada (m): ${userHead.toFixed(2)} | Altura da Curva (m): ${curveHead.toFixed(2)}`;
-    document.getElementById('powerResult').textContent = `Potência da Curva (CV): ${power.toFixed(3)}`;
-    document.getElementById('efficiencyResult').textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
+    const flowResult = document.getElementById('flowResult');
+    const headResult = document.getElementById('headResult');
+    const powerResult = document.getElementById('powerResult');
+    const efficiencyResult = document.getElementById('efficiencyResult');
+    
+    if (flowResult) flowResult.textContent = `Vazão (m³/h): ${flow.toFixed(2)}`;
+    if (headResult) headResult.textContent = `Altura Especificada (m): ${userHead.toFixed(2)} | Altura da Curva (m): ${curveHead.toFixed(2)}`;
+    if (powerResult) powerResult.textContent = `Potência da Curva (CV): ${power.toFixed(3)}`;
+    if (efficiencyResult) efficiencyResult.textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
     
     chart.update();
+    console.log('Pontos de operação atualizados no gráfico');
 }
 
 function clearOperatingPoint() {
-    if (operatingPointDatasets.length > 0) {
+    if (chart && operatingPointDatasets.length > 0) {
         chart.data.datasets = chart.data.datasets.slice(0, 4);
         operatingPointDatasets = [];
         chart.update();
@@ -582,24 +662,38 @@ function clearOperatingPoint() {
 }
 
 function clearAll() {
-    document.getElementById('flowInput').value = '';
-    document.getElementById('headInput').value = '';
+    const flowInput = document.getElementById('flowInput');
+    const headInput = document.getElementById('headInput');
+    
+    if (flowInput) flowInput.value = '';
+    if (headInput) headInput.value = '';
     
     clearOperatingPoint();
     clearResults();
 }
 
 function clearResults() {
-    document.getElementById('flowResult').textContent = 'Vazão (m³/h): -';
-    document.getElementById('headResult').textContent = 'Altura (m): -';
-    document.getElementById('powerResult').textContent = 'Potência Resultante (CV): -';
-    document.getElementById('efficiencyResult').textContent = 'Rendimento no Ponto (%): -';
-    document.getElementById('statusResult').textContent = '';
-    document.getElementById('statusResult').className = 'status-message';
+    const flowResult = document.getElementById('flowResult');
+    const headResult = document.getElementById('headResult');
+    const powerResult = document.getElementById('powerResult');
+    const efficiencyResult = document.getElementById('efficiencyResult');
+    const statusResult = document.getElementById('statusResult');
+    
+    if (flowResult) flowResult.textContent = 'Vazão (m³/h): -';
+    if (headResult) headResult.textContent = 'Altura (m): -';
+    if (powerResult) powerResult.textContent = 'Potência Resultante (CV): -';
+    if (efficiencyResult) efficiencyResult.textContent = 'Rendimento no Ponto (%): -';
+    if (statusResult) {
+        statusResult.textContent = '';
+        statusResult.className = 'status-message';
+    }
 }
 
 function showStatus(message, type) {
     const statusElement = document.getElementById('statusResult');
-    statusElement.textContent = message;
-    statusElement.className = `status-message ${type}`;
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.className = `status-message ${type}`;
+    }
+    console.log(`Status: ${type} - ${message}`);
 }
