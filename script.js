@@ -132,7 +132,9 @@ const pumpData = {
 
 let chart;
 let operatingPointDatasets = [];
-window.chartInitialized = false;
+let isChartInitialized = false;
+let initializationAttempts = 0;
+const MAX_INIT_ATTEMPTS = 10;
 
 // Função de interpolação linear
 function interp(x, xp, fp) {
@@ -148,17 +150,49 @@ function interp(x, xp, fp) {
     return fp[fp.length - 1];
 }
 
-// Aguardar o carregamento completo da página
+// Função para verificar se Chart.js está disponível
+function isChartJSAvailable() {
+    return typeof Chart !== 'undefined' && Chart.Chart;
+}
+
+// Função para aguardar Chart.js carregar
+function waitForChartJS(callback, attempt = 0) {
+    if (attempt >= MAX_INIT_ATTEMPTS) {
+        console.error('❌ Chart.js não carregou após múltiplas tentativas');
+        showStatus("Erro: Biblioteca de gráficos não carregou. Recarregue a página.", "error");
+        return;
+    }
+    
+    if (isChartJSAvailable()) {
+        console.log('✅ Chart.js disponível, executando callback');
+        callback();
+    } else {
+        console.log(`⏳ Aguardando Chart.js... tentativa ${attempt + 1}/${MAX_INIT_ATTEMPTS}`);
+        setTimeout(() => waitForChartJS(callback, attempt + 1), 500);
+    }
+}
+
+// Função principal de inicialização
 function initializeSystem() {
     console.log('🚀 Inicializando sistema...');
+    
+    if (isChartInitialized) {
+        console.log('⚠️ Sistema já inicializado');
+        return;
+    }
     
     const ctx = document.getElementById('pumpChart');
     if (!ctx) {
         console.error('❌ Canvas não encontrado!');
-        return false;
+        return;
     }
     
-    console.log('✅ Canvas encontrado, criando gráfico...');
+    console.log('✅ Canvas encontrado, verificando Chart.js...');
+    
+    if (!isChartJSAvailable()) {
+        console.error('❌ Chart.js não está disponível');
+        return;
+    }
     
     try {
         // Destruir chart existente se houver
@@ -167,6 +201,10 @@ function initializeSystem() {
             chart.destroy();
             chart = null;
         }
+        
+        // Configuração do Chart.js
+        Chart.defaults.responsive = true;
+        Chart.defaults.maintainAspectRatio = false;
         
         chart = new Chart(ctx, {
             type: 'line',
@@ -284,92 +322,147 @@ function initializeSystem() {
         });
         
         console.log('✅ Gráfico criado com sucesso!');
-        window.chartInitialized = true;
+        isChartInitialized = true;
         
-        // Event listeners
-        const pumpSelect = document.getElementById('pumpSelect');
-        if (pumpSelect) {
-            pumpSelect.addEventListener('change', onPumpSelect);
-            console.log('✅ Event listener adicionado ao select');
-        }
+        // Configurar event listeners
+        setupEventListeners();
         
         // Inicializar com a primeira bomba
         onPumpSelect();
         console.log('🎉 Sistema inicializado completamente!');
-        return true;
         
     } catch (error) {
         console.error('❌ Erro ao criar gráfico:', error);
-        return false;
+        isChartInitialized = false;
     }
 }
 
-// Inicialização robusta
+// Configurar event listeners
+function setupEventListeners() {
+    const pumpSelect = document.getElementById('pumpSelect');
+    if (pumpSelect) {
+        // Remover listeners existentes
+        pumpSelect.removeEventListener('change', onPumpSelect);
+        // Adicionar novo listener
+        pumpSelect.addEventListener('change', onPumpSelect);
+        console.log('✅ Event listener configurado');
+    }
+}
+
+// Função de inicialização robusta
 function startSystem() {
-    console.log('🔄 Tentando inicializar sistema...');
+    initializationAttempts++;
+    console.log(`🔄 Tentativa de inicialização ${initializationAttempts}/${MAX_INIT_ATTEMPTS}`);
     
-    // Verificar se Chart.js está carregado
-    if (typeof Chart !== 'undefined') {
-        console.log('✅ Chart.js disponível');
-        const success = initializeSystem();
-        if (!success) {
-            console.log('⏳ Falha na inicialização, tentando novamente...');
-            setTimeout(startSystem, 1000);
-        }
-    } else {
-        console.log('⏳ Chart.js não disponível, tentando novamente...');
-        setTimeout(startSystem, 500);
+    if (initializationAttempts > MAX_INIT_ATTEMPTS) {
+        console.error('❌ Máximo de tentativas de inicialização atingido');
+        showStatus("Erro: Falha na inicialização. Recarregue a página.", "error");
+        return;
     }
+    
+    // Verificar se todos os elementos DOM estão disponíveis
+    const requiredElements = [
+        'pumpChart', 'pumpSelect', 'powerInfo', 'rotationInfo', 
+        'npshInfo', 'efficiencyInfo', 'flowInput', 'headInput'
+    ];
+    
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    
+    if (missingElements.length > 0) {
+        console.log('⏳ Elementos DOM ainda não disponíveis:', missingElements);
+        setTimeout(startSystem, 200);
+        return;
+    }
+    
+    // Aguardar Chart.js e inicializar
+    waitForChartJS(() => {
+        if (!isChartInitialized) {
+            initializeSystem();
+        }
+    });
 }
 
-// Múltiplas tentativas de inicialização
+// Event listeners para inicialização
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📄 DOM carregado');
     setTimeout(startSystem, 100);
 });
 
-// Fallback adicional
 window.addEventListener('load', function() {
     console.log('🌐 Window carregado');
-    if (!window.chartInitialized) {
-        console.log('🔄 Tentativa adicional de inicialização...');
-        setTimeout(startSystem, 500);
+    if (!isChartInitialized) {
+        setTimeout(startSystem, 200);
     }
 });
 
+// Fallback adicional para garantir inicialização
+setTimeout(() => {
+    if (!isChartInitialized) {
+        console.log('🔄 Fallback de inicialização...');
+        startSystem();
+    }
+}, 2000);
+
 function onPumpSelect() {
     console.log('🔧 Bomba selecionada');
+    
+    if (!isChartInitialized) {
+        console.log('⏳ Aguardando inicialização do gráfico...');
+        setTimeout(onPumpSelect, 500);
+        return;
+    }
+    
     clearResults();
-    const selectedPump = document.getElementById('pumpSelect').value;
+    const pumpSelect = document.getElementById('pumpSelect');
+    if (!pumpSelect) {
+        console.error('❌ Select da bomba não encontrado');
+        return;
+    }
+    
+    const selectedPump = pumpSelect.value;
     const data = pumpData[selectedPump];
+    
+    if (!data) {
+        console.error('❌ Dados da bomba não encontrados:', selectedPump);
+        return;
+    }
     
     console.log('📊 Dados da bomba:', selectedPump, data);
     
     // Atualizar informações da bomba
-    const powerInfo = document.getElementById('powerInfo');
-    const rotationInfo = document.getElementById('rotationInfo');
-    const npshInfo = document.getElementById('npshInfo');
-    const efficiencyInfo = document.getElementById('efficiencyInfo');
+    updatePumpInfo(data);
     
-    if (powerInfo) {
-        powerInfo.textContent = `${data.potencia_cv} CV`;
-        console.log('✅ Potência atualizada:', data.potencia_cv);
-    }
-    if (rotationInfo) {
-        rotationInfo.textContent = `${data.rotacao_rpm} rpm`;
-        console.log('✅ Rotação atualizada:', data.rotacao_rpm);
-    }
-    if (npshInfo) {
-        npshInfo.textContent = `${data.npsh_mca} mca`;
-        console.log('✅ NPSH atualizado:', data.npsh_mca);
-    }
-    if (efficiencyInfo) {
-        efficiencyInfo.textContent = `${data.rendimento_percent}%`;
-        console.log('✅ Rendimento atualizado:', data.rendimento_percent);
-    }
-    
+    // Plotar curvas
     console.log('📈 Plotando curvas...');
     plotCurves();
+}
+
+function updatePumpInfo(data) {
+    const elements = {
+        powerInfo: document.getElementById('powerInfo'),
+        rotationInfo: document.getElementById('rotationInfo'),
+        npshInfo: document.getElementById('npshInfo'),
+        efficiencyInfo: document.getElementById('efficiencyInfo')
+    };
+    
+    try {
+        if (elements.powerInfo) {
+            elements.powerInfo.textContent = `${data.potencia_cv} CV`;
+        }
+        if (elements.rotationInfo) {
+            elements.rotationInfo.textContent = `${data.rotacao_rpm} rpm`;
+        }
+        if (elements.npshInfo) {
+            elements.npshInfo.textContent = `${data.npsh_mca} mca`;
+        }
+        if (elements.efficiencyInfo) {
+            elements.efficiencyInfo.textContent = `${data.rendimento_percent}%`;
+        }
+        
+        console.log('✅ Informações da bomba atualizadas');
+    } catch (error) {
+        console.error('❌ Erro ao atualizar informações da bomba:', error);
+    }
 }
 
 function plotCurves() {
@@ -378,79 +471,113 @@ function plotCurves() {
         return;
     }
     
-    const selectedPump = document.getElementById('pumpSelect').value;
+    const pumpSelect = document.getElementById('pumpSelect');
+    if (!pumpSelect) {
+        console.error('❌ Select não encontrado');
+        return;
+    }
+    
+    const selectedPump = pumpSelect.value;
     const data = pumpData[selectedPump];
+    
+    if (!data) {
+        console.error('❌ Dados da bomba não encontrados');
+        return;
+    }
     
     console.log('📊 Plotando curvas para:', selectedPump);
     
-    const datasets = [
-        {
-            label: 'Altura (H)',
-            data: data.vazao_data.map((x, i) => ({x: x, y: data.altura_data[i]})),
-            borderColor: 'red',
-            backgroundColor: 'rgba(255, 0, 0, 0.1)',
-            yAxisID: 'y',
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            borderWidth: 2
-        },
-        {
-            label: 'Potência (CV)',
-            data: data.vazao_data.map((x, i) => ({x: x, y: data.potencia_data[i]})),
-            borderColor: 'blue',
-            backgroundColor: 'rgba(0, 0, 255, 0.1)',
-            yAxisID: 'y1',
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            borderWidth: 2
-        },
-        {
-            label: 'NPSH (mca)',
-            data: data.vazao_data.map((x, i) => ({x: x, y: data.npsh_curva[i]})),
-            borderColor: 'green',
-            backgroundColor: 'rgba(0, 255, 0, 0.1)',
-            yAxisID: 'y2',
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            borderWidth: 2
-        },
-        {
-            label: 'Rendimento (%)',
-            data: data.vazao_data.map((x, i) => ({x: x, y: data.rendimento_curva[i]})),
-            borderColor: 'purple',
-            backgroundColor: 'rgba(128, 0, 128, 0.1)',
-            yAxisID: 'y3',
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            borderWidth: 2
-        }
-    ];
-    
-    chart.data.datasets = datasets;
-    chart.update();
-    console.log('✅ Curvas plotadas com sucesso!');
+    try {
+        const datasets = [
+            {
+                label: 'Altura (H)',
+                data: data.vazao_data.map((x, i) => ({x: x, y: data.altura_data[i]})),
+                borderColor: 'red',
+                backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                yAxisID: 'y',
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+            },
+            {
+                label: 'Potência (CV)',
+                data: data.vazao_data.map((x, i) => ({x: x, y: data.potencia_data[i]})),
+                borderColor: 'blue',
+                backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                yAxisID: 'y1',
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+            },
+            {
+                label: 'NPSH (mca)',
+                data: data.vazao_data.map((x, i) => ({x: x, y: data.npsh_curva[i]})),
+                borderColor: 'green',
+                backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                yAxisID: 'y2',
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+            },
+            {
+                label: 'Rendimento (%)',
+                data: data.vazao_data.map((x, i) => ({x: x, y: data.rendimento_curva[i]})),
+                borderColor: 'purple',
+                backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                yAxisID: 'y3',
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 2
+            }
+        ];
+        
+        chart.data.datasets = datasets;
+        chart.update();
+        console.log('✅ Curvas plotadas com sucesso!');
+        
+    } catch (error) {
+        console.error('❌ Erro ao plotar curvas:', error);
+    }
 }
 
 function calculateOperatingPoint() {
     console.log('🧮 Calculando ponto de operação...');
+    
+    if (!isChartInitialized) {
+        showStatus("Erro: Gráfico não inicializado. Aguarde ou recarregue a página.", "error");
+        return;
+    }
+    
     clearOperatingPoint();
     
-    const flowInput = document.getElementById('flowInput').value;
-    const headInput = document.getElementById('headInput').value;
+    const flowInput = document.getElementById('flowInput');
+    const headInput = document.getElementById('headInput');
     
-    if (flowInput === '' || headInput === '') {
+    if (!flowInput || !headInput) {
+        showStatus("Erro: Campos de entrada não encontrados.", "error");
+        return;
+    }
+    
+    if (flowInput.value === '' || headInput.value === '') {
         showStatus("Erro: Insira valores para vazão e altura.", "error");
         return;
     }
     
     try {
-        const flowVal = parseFloat(flowInput);
-        const headVal = parseFloat(headInput);
-        const selectedPump = document.getElementById('pumpSelect').value;
+        const flowVal = parseFloat(flowInput.value);
+        const headVal = parseFloat(headInput.value);
+        const pumpSelect = document.getElementById('pumpSelect');
+        
+        if (!pumpSelect) {
+            showStatus("Erro: Seleção de bomba não encontrada.", "error");
+            return;
+        }
+        
+        const selectedPump = pumpSelect.value;
         const data = pumpData[selectedPump];
         
         console.log('📊 Valores:', { flowVal, headVal, selectedPump });
@@ -575,121 +702,148 @@ function updateOperatingPointDisplay(flow, userHead, power, efficiency, npshRequ
     console.log('🎯 Atualizando display do ponto de operação');
     clearOperatingPoint();
     
-    // Adicionar pontos de operação ao gráfico
-    // Ponto do usuário (altura especificada pelo usuário)
-    const userPoint = {
-        label: 'Ponto Especificado',
-        data: [{x: flow, y: userHead}],
-        borderColor: 'red',
-        backgroundColor: 'red',
-        yAxisID: 'y',
-        pointRadius: 10,
-        pointHoverRadius: 12,
-        showLine: false,
-        pointBorderWidth: 3,
-        pointBorderColor: 'darkred',
-        pointStyle: 'circle'
-    };
-    
-    // Pontos nas curvas da bomba (valores reais das curvas)
-    const curvePoints = [
-        {
-            label: 'Ponto na Curva H-Q',
-            data: [{x: flow, y: curveHead}],
-            borderColor: 'black',
-            backgroundColor: 'yellow',
+    try {
+        // Adicionar pontos de operação ao gráfico
+        // Ponto do usuário (altura especificada pelo usuário)
+        const userPoint = {
+            label: 'Ponto Especificado',
+            data: [{x: flow, y: userHead}],
+            borderColor: 'red',
+            backgroundColor: 'red',
             yAxisID: 'y',
-            pointRadius: 8,
-            pointHoverRadius: 10,
+            pointRadius: 10,
+            pointHoverRadius: 12,
             showLine: false,
-            pointBorderWidth: 2,
-            pointBorderColor: 'black',
-            pointStyle: 'triangle'
-        },
-        {
+            pointBorderWidth: 3,
+            pointBorderColor: 'darkred',
+            pointStyle: 'circle'
+        };
+        
+        // Pontos nas curvas da bomba (valores reais das curvas)
+        const curvePoints = [
+            {
+                label: 'Ponto na Curva H-Q',
+                data: [{x: flow, y: curveHead}],
+                borderColor: 'black',
+                backgroundColor: 'yellow',
+                yAxisID: 'y',
+                pointRadius: 8,
+                pointHoverRadius: 10,
+                showLine: false,
+                pointBorderWidth: 2,
+                pointBorderColor: 'black',
+                pointStyle: 'triangle'
+            },
+            {
+                label: '',
+                data: [{x: flow, y: power}],
+                borderColor: 'black',
+                backgroundColor: 'yellow',
+                yAxisID: 'y1',
+                pointRadius: 8,
+                pointHoverRadius: 10,
+                showLine: false,
+                pointBorderWidth: 2,
+                pointBorderColor: 'black',
+                pointStyle: 'triangle'
+            },
+            {
+                label: '',
+                data: [{x: flow, y: npshRequired}],
+                borderColor: 'black',
+                backgroundColor: 'yellow',
+                yAxisID: 'y2',
+                pointRadius: 8,
+                pointHoverRadius: 10,
+                showLine: false,
+                pointBorderWidth: 2,
+                pointBorderColor: 'black',
+                pointStyle: 'triangle'
+            },
+            {
+                label: '',
+                data: [{x: flow, y: efficiency}],
+                borderColor: 'black',
+                backgroundColor: 'yellow',
+                yAxisID: 'y3',
+                pointRadius: 8,
+                pointHoverRadius: 10,
+                showLine: false,
+                pointBorderWidth: 2,
+                pointBorderColor: 'black',
+                pointStyle: 'triangle'
+            }
+        ];
+        
+        // Adicionar linha vertical para mostrar a vazão
+        const maxHeightForLine = Math.max(curveHead, userHead, 0) * 1.1;
+        const minHeightForLine = Math.min(curveHead, userHead, 0) * 1.1;
+        
+        const verticalLine = {
             label: '',
-            data: [{x: flow, y: power}],
-            borderColor: 'black',
-            backgroundColor: 'yellow',
-            yAxisID: 'y1',
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            showLine: false,
-            pointBorderWidth: 2,
-            pointBorderColor: 'black',
-            pointStyle: 'triangle'
-        },
-        {
-            label: '',
-            data: [{x: flow, y: npshRequired}],
-            borderColor: 'black',
-            backgroundColor: 'yellow',
-            yAxisID: 'y2',
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            showLine: false,
-            pointBorderWidth: 2,
-            pointBorderColor: 'black',
-            pointStyle: 'triangle'
-        },
-        {
-            label: '',
-            data: [{x: flow, y: efficiency}],
-            borderColor: 'black',
-            backgroundColor: 'yellow',
-            yAxisID: 'y3',
-            pointRadius: 8,
-            pointHoverRadius: 10,
-            showLine: false,
-            pointBorderWidth: 2,
-            pointBorderColor: 'black',
-            pointStyle: 'triangle'
-        }
-    ];
-    
-    // Adicionar linha vertical para mostrar a vazão
-    const maxHeightForLine = Math.max(curveHead, userHead, 0) * 1.1;
-    const minHeightForLine = Math.min(curveHead, userHead, 0) * 1.1;
-    
-    const verticalLine = {
-        label: '',
-        data: [
-            {x: flow, y: minHeightForLine},
-            {x: flow, y: maxHeightForLine}
-        ],
-        borderColor: 'rgba(128, 128, 128, 0.5)',
-        backgroundColor: 'transparent',
-        yAxisID: 'y',
-        borderWidth: 1,
-        borderDash: [5, 5],
-        pointRadius: 0,
-        showLine: true,
-        fill: false
+            data: [
+                {x: flow, y: minHeightForLine},
+                {x: flow, y: maxHeightForLine}
+            ],
+            borderColor: 'rgba(128, 128, 128, 0.5)',
+            backgroundColor: 'transparent',
+            yAxisID: 'y',
+            borderWidth: 1,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            showLine: true,
+            fill: false
+        };
+        
+        operatingPointDatasets = [userPoint, ...curvePoints, verticalLine];
+        chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPointDatasets];
+        
+        // Atualizar resultados com valores das curvas da bomba
+        updateResultsDisplay(flow, userHead, curveHead, power, efficiency);
+        
+        chart.update();
+        console.log('✅ Pontos de operação atualizados no gráfico');
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar pontos de operação:', error);
+    }
+}
+
+function updateResultsDisplay(flow, userHead, curveHead, power, efficiency) {
+    const elements = {
+        flowResult: document.getElementById('flowResult'),
+        headResult: document.getElementById('headResult'),
+        powerResult: document.getElementById('powerResult'),
+        efficiencyResult: document.getElementById('efficiencyResult')
     };
     
-    operatingPointDatasets = [userPoint, ...curvePoints, verticalLine];
-    chart.data.datasets = [...chart.data.datasets.slice(0, 4), ...operatingPointDatasets];
-    
-    // Atualizar resultados com valores das curvas da bomba
-    const flowResult = document.getElementById('flowResult');
-    const headResult = document.getElementById('headResult');
-    const powerResult = document.getElementById('powerResult');
-    const efficiencyResult = document.getElementById('efficiencyResult');
-    
-    if (flowResult) flowResult.textContent = `Vazão (m³/h): ${flow.toFixed(2)}`;
-    if (headResult) headResult.textContent = `Altura Especificada (m): ${userHead.toFixed(2)} | Altura da Curva (m): ${curveHead.toFixed(2)}`;
-    if (powerResult) powerResult.textContent = `Potência da Curva (CV): ${power.toFixed(3)}`;
-    if (efficiencyResult) efficiencyResult.textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
-    
-    chart.update();
-    console.log('✅ Pontos de operação atualizados no gráfico');
+    try {
+        if (elements.flowResult) {
+            elements.flowResult.textContent = `Vazão (m³/h): ${flow.toFixed(2)}`;
+        }
+        if (elements.headResult) {
+            elements.headResult.textContent = `Altura Especificada (m): ${userHead.toFixed(2)} | Altura da Curva (m): ${curveHead.toFixed(2)}`;
+        }
+        if (elements.powerResult) {
+            elements.powerResult.textContent = `Potência da Curva (CV): ${power.toFixed(3)}`;
+        }
+        if (elements.efficiencyResult) {
+            elements.efficiencyResult.textContent = `Rendimento da Curva (%): ${efficiency.toFixed(2)}`;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao atualizar resultados:', error);
+    }
 }
 
 function clearOperatingPoint() {
     if (chart && operatingPointDatasets.length > 0) {
-        chart.data.datasets = chart.data.datasets.slice(0, 4);
-        operatingPointDatasets = [];
-        chart.update();
+        try {
+            chart.data.datasets = chart.data.datasets.slice(0, 4);
+            operatingPointDatasets = [];
+            chart.update();
+        } catch (error) {
+            console.error('❌ Erro ao limpar pontos de operação:', error);
+        }
     }
 }
 
@@ -705,19 +859,25 @@ function clearAll() {
 }
 
 function clearResults() {
-    const flowResult = document.getElementById('flowResult');
-    const headResult = document.getElementById('headResult');
-    const powerResult = document.getElementById('powerResult');
-    const efficiencyResult = document.getElementById('efficiencyResult');
-    const statusResult = document.getElementById('statusResult');
+    const elements = {
+        flowResult: document.getElementById('flowResult'),
+        headResult: document.getElementById('headResult'),
+        powerResult: document.getElementById('powerResult'),
+        efficiencyResult: document.getElementById('efficiencyResult'),
+        statusResult: document.getElementById('statusResult')
+    };
     
-    if (flowResult) flowResult.textContent = 'Vazão (m³/h): -';
-    if (headResult) headResult.textContent = 'Altura (m): -';
-    if (powerResult) powerResult.textContent = 'Potência Resultante (CV): -';
-    if (efficiencyResult) efficiencyResult.textContent = 'Rendimento no Ponto (%): -';
-    if (statusResult) {
-        statusResult.textContent = '';
-        statusResult.className = 'status-message';
+    try {
+        if (elements.flowResult) elements.flowResult.textContent = 'Vazão (m³/h): -';
+        if (elements.headResult) elements.headResult.textContent = 'Altura (m): -';
+        if (elements.powerResult) elements.powerResult.textContent = 'Potência Resultante (CV): -';
+        if (elements.efficiencyResult) elements.efficiencyResult.textContent = 'Rendimento no Ponto (%): -';
+        if (elements.statusResult) {
+            elements.statusResult.textContent = '';
+            elements.statusResult.className = 'status-message';
+        }
+    } catch (error) {
+        console.error('❌ Erro ao limpar resultados:', error);
     }
 }
 
@@ -729,3 +889,7 @@ function showStatus(message, type) {
     }
     console.log(`📢 Status: ${type} - ${message}`);
 }
+
+// Expor funções globalmente para uso nos botões HTML
+window.calculateOperatingPoint = calculateOperatingPoint;
+window.clearAll = clearAll;
