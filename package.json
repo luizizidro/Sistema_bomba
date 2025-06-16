@@ -2,6 +2,8 @@
   "name": "pump-selector-system",
   "private": true,
   "version": "1.0.0",
+  "description": "Sistema para análise e seleção de bombas centrífugas",
+  "author": "Sistema de Bombas <contato@sistemabombas.com>",
   "type": "module",
   "main": "main.js",
   "scripts": {
@@ -35,6 +37,13 @@
       "main.js",
       "preload.js"
     ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": [
         {
@@ -45,25 +54,19 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "icon": "assets/icon.ico"
+      ]
     },
     "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
+      "target": "dmg"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": "AppImage"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
-      "installerHeaderIcon": "assets/icon.ico",
       "deleteAppDataOnUninstall": false
     },
     "portable": {
